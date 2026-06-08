@@ -1,10 +1,8 @@
 ﻿<script setup lang="ts">
 import { ref, watch, nextTick } from "vue"
 import { useAuthStore } from "@/stores/auth"
-import { useSettingsStore } from "@/stores/settings"
 
 const auth = useAuthStore()
-const settings = useSettingsStore()
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>()
 
@@ -19,7 +17,10 @@ const allowRegister = ref(true)
 watch(() => props.modelValue, async (val) => {
   if (val) {
     isRegister.value = false
-    allowRegister.value = settings.allowRegister
+    try {
+      const r = await fetch("/api/settings")
+      if (r.ok) { const s = await r.json(); allowRegister.value = s.allow_register !== "false" }
+    } catch { /* ignore */ }
   }
 }, { immediate: true })
 

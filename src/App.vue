@@ -1,22 +1,37 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted, watch } from "vue"
 import { useDisplay } from "vuetify"
 import { useAuthStore } from "@/stores/auth"
-import { useSettingsStore } from "@/stores/settings"
 import NotesPage from "@/views/NotesPage.vue"
 
-import AdminPage from "@/views/AdminPage.vue"
-import LoginDialog from "@/components/LoginDialog.vue"
+const AdminPage = defineAsyncComponent(() => import("@/views/AdminPage.vue"))
+const LoginDialog = defineAsyncComponent(() => import("@/components/LoginDialog.vue"))
 
 const { mobile } = useDisplay()
+const isMobile = mobile
 
 const auth = useAuthStore()
-const settings = useSettingsStore()
 const showAdmin = ref(false)
 const showLogin = ref(false)
 const showMobileHeatmap = ref(false)
 
-onMounted(async () => { auth.init(); await settings.load(); settings.applyTitle() })
+onMounted(() => { auth.init(); loadSiteTitle() })
+
+async function loadSiteTitle() {
+  try {
+    const r = await fetch("/api/settings")
+    if (r.ok) {
+      const s = await r.json()
+      if (s.site_title) document.title = s.site_title
+      if (s.site_favicon) {
+        const link = document.querySelector("link[rel=\"icon\"]") || document.createElement("link")
+        link.setAttribute("rel", "icon")
+        link.setAttribute("href", s.site_favicon)
+        document.head.appendChild(link)
+      }
+    }
+  } catch { /* ignore */ }
+}
 
 watch([() => auth.isLoggedIn, () => auth.userRole], () => {
   if (!auth.isLoggedIn || auth.userRole !== "admin") showAdmin.value = false
@@ -26,7 +41,7 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
 <template>
   <v-app>
     <!-- Desktop sidebar -->
-    <div v-if="!mobile" class="sidebar">
+    <div v-if="!isMobile" class="sidebar">
       <div class="sidebar-top">
         <template v-if="auth.isLoggedIn && auth.userAppIcon">
           <v-img :src="auth.userAppIcon" width="28" height="28" class="sidebar-icon-img" />
@@ -50,7 +65,7 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
     </div>
 
     <!-- Mobile bottom bar -->
-    <div v-if="mobile" class="mobile-bottom-bar">
+    <div v-if="isMobile" class="mobile-bottom-bar">
       <div class="mobile-bar-inner">
         <template v-if="auth.isLoggedIn && auth.userAppIcon">
           <v-img :src="auth.userAppIcon" width="22" height="22" class="mobile-bar-icon" />
@@ -59,10 +74,10 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
           <v-icon size="22" color="primary">mdi-pencil-box-multiple</v-icon>
         </template>
         <v-spacer />
+        <v-btn icon="mdi-theme-light-dark" variant="text" size="small" class="mobile-bar-btn" @click.stop="$vuetify.theme.cycle()" />
         <v-btn icon="mdi-fire" variant="text" size="small" class="mobile-bar-btn"
           :color="showMobileHeatmap ? 'primary' : undefined"
           @click.stop="showMobileHeatmap = !showMobileHeatmap" />
-        <v-btn icon="mdi-theme-light-dark" variant="text" size="small" class="mobile-bar-btn" @click.stop="$vuetify.theme.cycle()" />
         <template v-if="auth.ready && auth.isLoggedIn">
           <v-btn icon="mdi-cog-outline" variant="text" size="small" class="mobile-bar-btn"
             :color="showAdmin ? 'primary' : undefined"
@@ -74,7 +89,7 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
       </div>
     </div>
 
-    <v-main class="main-bg" :class="{ 'has-sidebar': !mobile, 'has-bottom-bar': mobile }">
+    <v-main class="main-bg" :class="{ 'has-sidebar': !isMobile, 'has-bottom-bar': isMobile }">
       <AdminPage v-if="showAdmin" @back="showAdmin = false" />
       <NotesPage v-else :mobile-heatmap="showMobileHeatmap" @close-heatmap="showMobileHeatmap = false" />
     </v-main>
@@ -84,7 +99,7 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
 
 <style>
 .main-bg { min-height: 100vh; background: rgb(var(--v-theme-background)); }
-.main-bg.has-sidebar { margin-left: 56px; width: calc(100% - 56px); }
+.main-bg.has-sidebar { margin-left: 56px; }
 .main-bg.has-bottom-bar { margin-left: 0; padding-bottom: 56px; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: rgba(var(--v-theme-on-surface), 0.15); border-radius: 3px; }
@@ -145,9 +160,3 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
 .mobile-bar-btn { opacity: 0.6; transition: opacity 0.2s; }
 .mobile-bar-btn:active { opacity: 1; }
 </style>
-
-
-
-
-
-

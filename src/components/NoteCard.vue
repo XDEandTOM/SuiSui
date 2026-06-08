@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted, nextTick } from "vue"
 import type { Note } from "@/stores/notes"
 import { useNotesStore } from "@/stores/notes"
@@ -24,22 +24,22 @@ function isImage(val?: string) {
 }
 
 function displayName(memo: Note) {
-  return memo.nickname?.trim() || memo.username || "����"
+  return memo.nickname?.trim() || memo.username || "匿名"
 }
 
 function timeAgo(ts: number) {
   const diff = Date.now() - ts
   const seconds = Math.floor(diff / 1000)
-  if (seconds < 60) return "�ո�"
+  if (seconds < 60) return "刚刚"
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes} ����ǰ`
+  if (minutes < 60) return `${minutes} 分钟前`
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} Сʱǰ`
+  if (hours < 24) return `${hours} 小时前`
   const days = Math.floor(hours / 24)
-  if (days < 30) return `${days} ��ǰ`
+  if (days < 30) return `${days} 天前`
   const months = Math.floor(days / 30)
-  if (months < 12) return `${months} ����ǰ`
-  return `${Math.floor(months / 12)} ��ǰ`
+  if (months < 12) return `${months} 个月前`
+  return `${Math.floor(months / 12)} 年前`
 }
 </script>
 
@@ -58,7 +58,7 @@ function timeAgo(ts: number) {
           </div>
           <div class="time">{{ timeAgo(memo.createdAt) }}</div>
         </div>
-        <div v-if="loggedIn" class="d-flex ga-1 flex-shrink-0" >
+        <div v-if="loggedIn" class="d-flex ga-1 flex-shrink-0" style="margin-top:2px">
           <v-btn icon="mdi-pencil" size="x-small" variant="text" class="action-btn" @click="emit('edit', memo)" />
           <v-btn icon="mdi-pin-outline" size="x-small" variant="text"
             :color="memo.pinned ? 'primary' : undefined" class="action-btn"
@@ -72,7 +72,7 @@ function timeAgo(ts: number) {
       </div>
       <div v-if="isOverflow" class="expand-bar">
         <button class="expand-btn" @click="expanded = !expanded">
-          {{ expanded ? "����" : "չ��ȫ��" }}
+          {{ expanded ? "收起" : "展开全文" }}
           <v-icon size="x-small">{{ expanded ? "mdi-chevron-up" : "mdi-chevron-down" }}</v-icon>
         </button>
       </div>
@@ -101,7 +101,6 @@ function timeAgo(ts: number) {
   background: rgba(var(--v-theme-primary), 0.02);
 }
 .card-inner { padding: 12px; }
-.card-header-actions { display: flex; gap: 4px; flex-shrink: 0; margin-top: 2px; }
 .avatar-wrap {
   width: 40px; height: 40px; flex-shrink: 0; overflow: hidden;
   border-radius: 8px; background: rgb(var(--v-theme-primary));
@@ -162,7 +161,5 @@ function timeAgo(ts: number) {
   .memo-card { border-radius: 10px !important; }
 }
 </style>
-
-
 
 

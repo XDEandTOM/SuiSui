@@ -1,14 +1,12 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted, watch } from "vue"
 import { useAuthStore } from "@/stores/auth"
-import { useSettingsStore } from "@/stores/settings"
 import AvatarPicker from "@/components/AvatarPicker.vue"
 import AppIconPicker from "@/components/AppIconPicker.vue"
 import FaviconPicker from "@/components/FaviconPicker.vue"
 
 const API = "/api"
 const auth = useAuthStore()
-const settings = useSettingsStore()
 const emit = defineEmits<{ back: [] }>()
 
 const tab = ref("overview")
@@ -49,30 +47,47 @@ async function loadUsers() {
   try { const r = await fetch(API + "/admin/users"); if (r.ok) users.value = await r.json() } catch {}
 }
 async function loadSettings() {
-  await settings.load()
-  siteTitle.value = settings.siteTitle
-  siteIcp.value = settings.siteIcp
-  document.title = settings.siteTitle || "Mengji"
-  allowRegister.value = settings.allowRegister
+  try {
+    const r = await fetch(API + "/settings")
+    if (r.ok) {
+      const s = await r.json()
+      siteTitle.value = s.site_title || ""
+      siteIcp.value = s.site_icp || ""
+      document.title = s.site_title || "Mengji"
+      allowRegister.value = s.allow_register !== "false"
+    }
+  } catch {}
 }
 async function saveSiteTitle() {
-  await settings.save("site_title", siteTitle.value.trim())
-  siteTitle.value = siteTitle.value.trim()
-  settings.applyTitle()
-  snackMsg.value = "???????"; snackbar.value = true
+  try {
+    await fetch(API + "/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "site_title", value: siteTitle.value.trim() })
+    })
+    document.title = siteTitle.value.trim() || "Mengji"
+    snackMsg.value = "网站标题已保存"; snackbar.value = true
+  } catch {}
 }
 async function saveSiteIcp() {
-  await settings.save("site_icp", siteIcp.value.trim())
-  siteIcp.value = siteIcp.value.trim()
-  snackMsg.value = "??????"; snackbar.value = true
+  try {
+    await fetch(API + "/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "site_icp", value: siteIcp.value.trim() })
+    })
+    snackMsg.value = "备案号已保存"; snackbar.value = true
+  } catch {}
 }
 async function toggleRegister(val: boolean) {
-  await settings.save("allow_register", val ? "true" : "false")
-  settings.allowRegister = val
-  snackMsg.value = val ? "?????" : "?????"; snackbar.value = true
+  try {
+    await fetch(API + "/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "allow_register", value: val ? "true" : "false" })
+    })
+    snackMsg.value = val ? "已允许注册" : "已关闭注册"; snackbar.value = true
+  } catch {}
 }
 async function deleteUser(id: number) {
-  if (!confirm("ȷ��ɾ����")) return
+  if (!confirm("确定删除？")) return
   deleting.value = id
   try { await fetch(API + "/admin/users/" + id, { method: "DELETE" }); await loadData() } catch {}
   deleting.value = null
@@ -82,7 +97,7 @@ async function saveNickname() {
   if (!nickInput.value.trim()) return
   const err = await auth.updateNickname(nickInput.value)
   if (err) { nickError.value = err; return }
-  snackMsg.value = "�ǳ��ѱ���"; snackbar.value = true
+  snackMsg.value = "昵称已保存"; snackbar.value = true
 }
 async function savePassword() {
   if (!oldPwd.value || !newPwd.value || newPwd.value.length < 4) return
@@ -94,7 +109,7 @@ async function savePassword() {
     const result = await res.json()
     if (result.error) return
     oldPwd.value = ""; newPwd.value = ""
-    snackMsg.value = "�������޸�"; snackbar.value = true
+    snackMsg.value = "密码已修改"; snackbar.value = true
   } catch {}
 }
 function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
@@ -108,27 +123,27 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
     <div class="d-flex align-center mb-4">
       <v-btn icon="mdi-arrow-left" variant="text" size="small" class="mr-2" @click="emit('back')" />
       <div>
-        <h1 class="text-h4 font-weight-bold mb-1">��̨����</h1>
-        <p class="text-body-2 text-medium-emphasis">�����û��뱸��¼</p>
+        <h1 class="text-h4 font-weight-bold mb-1">后台管理</h1>
+        <p class="text-body-2 text-medium-emphasis">管理用户与备忘录</p>
       </div>
       <v-spacer />
-      <v-btn prepend-icon="mdi-refresh" variant="text" size="small" :loading="loading" @click="loadData">ˢ��</v-btn>
+      <v-btn prepend-icon="mdi-refresh" variant="text" size="small" :loading="loading" @click="loadData">刷新</v-btn>
     </div>
 
     <v-tabs v-model="tab" color="primary" class="mb-4">
-      <v-tab value="overview" v-if="auth.isAdmin"><v-icon start size="small">mdi-view-dashboard</v-icon>����</v-tab>
-      <v-tab value="system" v-if="auth.isAdmin"><v-icon start size="small">mdi-cog</v-icon>ϵͳ����</v-tab>
-      <v-tab value="users" v-if="auth.isAdmin"><v-icon start size="small">mdi-account-group</v-icon>�û�����</v-tab>
-      <v-tab value="profile"><v-icon start size="small">mdi-account</v-icon>��������</v-tab>
+      <v-tab value="overview" v-if="auth.isAdmin"><v-icon start size="small">mdi-view-dashboard</v-icon>概览</v-tab>
+      <v-tab value="system" v-if="auth.isAdmin"><v-icon start size="small">mdi-cog</v-icon>系统设置</v-tab>
+      <v-tab value="users" v-if="auth.isAdmin"><v-icon start size="small">mdi-account-group</v-icon>用户管理</v-tab>
+      <v-tab value="profile"><v-icon start size="small">mdi-account</v-icon>个人资料</v-tab>
     </v-tabs>
 
     <template v-if='tab === "overview" && auth.isAdmin'>
       <v-card variant="outlined" class="rounded-xl pa-6 mb-4 stat-card">
-        <h3 class="text-subtitle-1 font-weight-medium mb-4">��վ����</h3>
+        <h3 class="text-subtitle-1 font-weight-medium mb-4">网站概览</h3>
         <div class="d-flex align-center justify-space-between py-3">
           <div class="d-flex align-center ga-3">
             <v-icon color="primary">mdi-account</v-icon>
-            <span class="text-body-2">�û�����</span>
+            <span class="text-body-2">用户总数</span>
           </div>
           <span class="text-h5 font-weight-bold">{{ stats?.totalUsers || 0 }}</span>
         </div>
@@ -136,7 +151,7 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
         <div class="d-flex align-center justify-space-between py-3">
           <div class="d-flex align-center ga-3">
             <v-icon color="primary">mdi-pencil-box-multiple</v-icon>
-            <span class="text-body-2">����¼����</span>
+            <span class="text-body-2">备忘录总数</span>
           </div>
           <span class="text-h5 font-weight-bold">{{ stats?.totalNotes || 0 }}</span>
         </div>
@@ -145,23 +160,23 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
 
     <template v-if='tab === "system" && auth.isAdmin'>
       <v-card variant="outlined" class="rounded-xl pa-6 mb-4 stat-card">
-        <h3 class="text-subtitle-1 font-weight-medium mb-4">ϵͳ����</h3>
+        <h3 class="text-subtitle-1 font-weight-medium mb-4">系统设置</h3>
         <div class="d-flex flex-column ga-4">
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center ga-3">
               <v-icon color="primary">mdi-web</v-icon>
-              <span class="text-body-2">��վ����</span>
+              <span class="text-body-2">网站标题</span>
             </div>
             <div class="d-flex align-center ga-2" style="flex:1;max-width:400px">
-              <v-text-field v-model="siteTitle" variant="outlined" hide-details density="compact" placeholder="��վ����" style="width:100%" @keyup.enter="saveSiteTitle" />
-              <v-btn size="small" variant="tonal" color="primary" @click="saveSiteTitle">����</v-btn>
+              <v-text-field v-model="siteTitle" variant="outlined" hide-details density="compact" placeholder="网站标题" style="width:100%" @keyup.enter="saveSiteTitle" />
+              <v-btn size="small" variant="tonal" color="primary" @click="saveSiteTitle">保存</v-btn>
             </div>
           </div>
           <v-divider />
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center ga-3">
               <v-icon color="primary">mdi-account-plus</v-icon>
-              <span class="text-body-2">�������û�ע��</span>
+              <span class="text-body-2">允许新用户注册</span>
             </div>
             <v-switch v-model="allowRegister" hide-details density="compact" @update:model-value="toggleRegister" color="primary" />
           </div>
@@ -169,31 +184,31 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center ga-3">
               <v-icon color="primary">mdi-certificate-outline</v-icon>
-              <span class="text-body-2">������</span>
+              <span class="text-body-2">备案号</span>
             </div>
             <div class="d-flex align-center ga-2" style="flex:1;max-width:400px">
-              <v-text-field v-model="siteIcp" variant="outlined" hide-details density="compact" placeholder="��ICP��xxxxxxxx��" style="width:100%" @keyup.enter="saveSiteIcp" />
-              <v-btn size="small" variant="tonal" color="primary" @click="saveSiteIcp">����</v-btn>
+              <v-text-field v-model="siteIcp" variant="outlined" hide-details density="compact" placeholder="沪ICP备xxxxxxxx号" style="width:100%" @keyup.enter="saveSiteIcp" />
+              <v-btn size="small" variant="tonal" color="primary" @click="saveSiteIcp">保存</v-btn>
             </div>
           </div>
           <v-divider />
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center ga-3">
               <v-icon color="primary">mdi-apps</v-icon>
-              <span class="text-body-2">������ͼ��</span>
+              <span class="text-body-2">工具栏图标</span>
             </div>
             <div class="d-flex align-center ga-2">
-              <v-btn size="small" variant="tonal" color="primary" @click="showAppIconPicker = true">�޸�</v-btn>
+              <v-btn size="small" variant="tonal" color="primary" @click="showAppIconPicker = true">修改</v-btn>
             </div>
           </div>
           <v-divider />
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center ga-3">
               <v-icon color="primary">mdi-image-multiple</v-icon>
-              <span class="text-body-2">��վͼ�� (Favicon)</span>
+              <span class="text-body-2">网站图标 (Favicon)</span>
             </div>
             <div class="d-flex align-center ga-2">
-              <v-btn size="small" variant="tonal" color="primary" @click="showFaviconPicker = true">����</v-btn>
+              <v-btn size="small" variant="tonal" color="primary" @click="showFaviconPicker = true">设置</v-btn>
             </div>
           </div>
         </div>
@@ -213,9 +228,9 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
               </v-avatar>
             </template>
             <v-list-item-title>{{ user.nickname || user.username }}</v-list-item-title>
-            <v-list-item-subtitle>@{{ user.username }} - {{ formatDate(user.createdAt) }} - {{ user.memoCount }}�� -
+            <v-list-item-subtitle>@{{ user.username }} - {{ formatDate(user.createdAt) }} - {{ user.memoCount }}条 -
               <v-chip size="x-small" :color="user.role === 'admin' ? 'primary' : 'default'" variant="tonal">
-                {{ user.role === 'admin' ? '����Ա' : '��ͨ�û�' }}
+                {{ user.role === 'admin' ? '管理员' : '普通用户' }}
               </v-chip>
             </v-list-item-subtitle>
             <template #append>
@@ -231,12 +246,11 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
 </template>
 
 <style scoped>
-.stat-card { border: 1px solid rgba(var(--v-theme-on-surface), 0.12); }
+.stat-card { border-color: #424242 !important; }
 @media (max-width: 768px) {
   .admin-container { padding: 12px !important; }
   .admin-container :deep(.v-tabs) { flex-wrap: nowrap; overflow-x: auto; }
   .admin-container :deep(.v-tab) { min-width: auto; padding: 0 12px; font-size: 0.8rem; }
 }
 </style>
-
 

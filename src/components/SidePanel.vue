@@ -25,12 +25,12 @@ function onTagClick(tag: string) {
 
 <template>
   <v-text-field v-model="searchQuery" prepend-inner-icon="mdi-magnify"
-    label="ËÑË÷±¸Íü..." variant="outlined" hide-details density="compact"
+    label="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½..." variant="outlined" hide-details density="compact"
     clearable class="mb-3 rounded-search" />
   <Heatmap class="mb-4" />
   <v-card variant="outlined" class="rounded-xl pa-4 side-card">
     <div class="d-flex align-center ga-2 mb-3">
-      <span class="text-subtitle-2 font-weight-medium">±êÇ©</span>
+      <span class="text-subtitle-2 font-weight-medium">ï¿½ï¿½Ç©</span>
     </div>
     <div class="d-flex flex-wrap ga-1">
       <v-chip v-for="[tag, count] in allTags" :key="tag" size="x-small" class="tag-chip"
@@ -40,7 +40,7 @@ function onTagClick(tag: string) {
         {{ tag }}
         <template #append><span class="text-caption opacity-75">{{ count }}</span></template>
       </v-chip>
-      <div v-if="!allTags.length" class="text-caption text-medium-emphasis py-2">ÔÝÎÞ±êÇ©</div>
+      <div v-if="!allTags.length" class="text-caption text-medium-emphasis py-2">ï¿½ï¿½ï¿½Þ±ï¿½Ç©</div>
     </div>
   </v-card>
 </template>

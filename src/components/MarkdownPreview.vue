@@ -1,6 +1,5 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed } from "vue"
-import ZoomOverlay from "./ZoomOverlay.vue"
 import { marked } from "marked"
 import hljs from "highlight.js"
 import "highlight.js/styles/github.css"
@@ -35,8 +34,8 @@ const rendered = computed(() => {
       const id = "c" + carouselIdx++
       return `<div class="carousel-wrap" data-id="${id}">
         <div class="carousel-track">${images.map((img, i) => `<div class="carousel-slide" data-idx="${i}">${img}</div>`).join("")}</div>
-        <button class="carousel-btn carousel-prev" data-id="${id}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
-        <button class="carousel-btn carousel-next" data-id="${id}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <button class="carousel-btn carousel-prev" data-id="${id}">‹</button>
+        <button class="carousel-btn carousel-next" data-id="${id}">›</button>
         <div class="carousel-dots">${images.map((_, i) => `<span class="carousel-dot" data-id="${id}" data-idx="${i}"></span>`).join("")}</div>
       </div>`
     })
@@ -77,7 +76,14 @@ function handleClick(e: MouseEvent) {
 
 <template>
   <div class="markdown-body" v-html="rendered" @click="handleClick" />
-  <ZoomOverlay v-if="zoomedImage" :src="zoomedImage" @close="zoomedImage = ''" />
+  <teleport to="body">
+    <div v-if="zoomedImage" class="zoom-overlay" @click="zoomedImage = ''">
+      <button class="zoom-close-btn" @click.stop="zoomedImage = ''">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <img :src="zoomedImage" class="zoom-img" @click.stop />
+    </div>
+  </teleport>
 </template>
 
 <style scoped>
@@ -128,5 +134,19 @@ function handleClick(e: MouseEvent) {
 .markdown-body :deep(.carousel-dot) { width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--v-theme-primary)); opacity: 0.35; cursor: pointer; transition: opacity 0.2s; }
 </style>
 
-
-
+<style>
+.zoom-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.8);
+  display: flex; align-items: center; justify-content: center;
+  cursor: zoom-out;
+}
+.zoom-img { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; cursor: default; }
+.zoom-close-btn {
+  position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 50%;
+  border: none; background: rgba(255,255,255,0.15); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.2s; z-index: 10000;
+}
+.zoom-close-btn:hover { background: rgba(255,255,255,0.3); }
+</style>
