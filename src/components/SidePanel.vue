@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed } from "vue"
 import { useNotesStore } from "@/stores/notes"
 import Heatmap from "./Heatmap.vue"
@@ -37,7 +37,7 @@ function onTagClick(tag: string) {
         @click="onTagClick(tag)"
         :color="selectedTag === tag ? 'primary' : undefined"
         :variant="selectedTag === tag ? 'flat' : 'outlined'">
-        {{ tag }}
+        #{{ tag }}
         <template #append><span class="text-caption opacity-75">{{ count }}</span></template>
       </v-chip>
       <div v-if="!allTags.length" class="text-caption text-medium-emphasis py-2">���ޱ�ǩ</div>
