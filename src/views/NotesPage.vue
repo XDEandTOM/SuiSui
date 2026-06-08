@@ -194,7 +194,7 @@ function handleEdit(memo: any) {
               <input ref="inlineFileInput" type="file" accept="image/*" multiple hidden @change="onInlineUpload" />
               <v-btn :icon="showInlineTags ? 'mdi-tag-off' : 'mdi-tag-outline'" size="x-small" variant="text" class="tool-btn" @click="showInlineTags = !showInlineTags" />
             </div>
-            <v-btn color="#1976D2" size="small" variant="flat" class="rounded-pill px-4 submit-btn" @click="submitInline">
+            <v-btn color="primary" size="small" variant="flat" class="rounded-pill px-4 submit-btn" @click="submitInline">
               <v-icon start size="x-small">mdi-send</v-icon>{{ editingNoteId ? "更新" : "发布" }}
             </v-btn>
           </div>

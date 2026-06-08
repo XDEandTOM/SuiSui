@@ -15,11 +15,18 @@ const users = ref<any[]>([])
 const loading = ref(false)
 const deleting = ref<null | number>(null)
 const nickError = ref("")
-const oldPwd = ref("")
-const newPwd = ref("")
 const snackbar = ref(false)
 const snackMsg = ref("")
 const nickInput = ref(auth.userNickname)
+const showNickDialog = ref(false)
+const showPwdDialog = ref(false)
+const showTitleDialog = ref(false)
+const showIcpDialog = ref(false)
+const pwdOld = ref("")
+const pwdNew = ref("")
+const pwdConfirm = ref("")
+const titleInput = ref("")
+const icpInput = ref("")
 const showAvatarPicker = ref(false)
 const showAppIconPicker = ref(false)
 const showFaviconPicker = ref(false)
@@ -68,6 +75,11 @@ async function loadSettings() {
     }
   } catch {}
 }
+function openTitleDialog() { titleInput.value = siteTitle.value; showTitleDialog.value = true }
+function openIcpDialog() { icpInput.value = siteIcp.value; showIcpDialog.value = true }
+function openNickDialog() { nickInput.value = auth.userNickname; nickError.value = ""; showNickDialog.value = true }
+function openPwdDialog() { pwdOld.value = ""; pwdNew.value = ""; pwdConfirm.value = ""; showPwdDialog.value = true }
+
 async function saveSiteTitle() {
   try {
     await fetch(API + "/settings", {
@@ -75,7 +87,7 @@ async function saveSiteTitle() {
       body: JSON.stringify({ key: "site_title", value: siteTitle.value.trim() })
     })
     document.title = siteTitle.value.trim() || "Mengji"
-    snackMsg.value = "网站标题已保存"; snackbar.value = true
+    snackMsg.value = "网站标题已保存"; snackbar.value = true; showTitleDialog.value = false
   } catch {}
 }
 async function saveSiteIcp() {
@@ -84,7 +96,7 @@ async function saveSiteIcp() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key: "site_icp", value: siteIcp.value.trim() })
     })
-    snackMsg.value = "备案号已保存"; snackbar.value = true
+    snackMsg.value = "备案号已保存"; snackbar.value = true; showIcpDialog.value = false
   } catch {}
 }
 async function toggleRegister(val: boolean) {
@@ -107,18 +119,19 @@ async function saveNickname() {
   if (!nickInput.value.trim()) return
   const err = await auth.updateNickname(nickInput.value)
   if (err) { nickError.value = err; return }
+  showNickDialog.value = false
   snackMsg.value = "昵称已保存"; snackbar.value = true
 }
 async function savePassword() {
-  if (!oldPwd.value || !newPwd.value || newPwd.value.length < 4) return
+  if (!pwdOld.value || !pwdNew.value || pwdNew.value.length < 4 || pwdNew.value !== pwdConfirm.value) return
   try {
     const res = await fetch(API + "/auth/password", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: auth.userName, oldPassword: oldPwd.value, newPassword: newPwd.value })
+      body: JSON.stringify({ username: auth.userName, oldPassword: pwdOld.value, newPassword: pwdNew.value })
     })
     const result = await res.json()
     if (result.error) return
-    oldPwd.value = ""; newPwd.value = ""
+    pwdOld.value = ""; pwdNew.value = ""; pwdConfirm.value = ""; showPwdDialog.value = false
     snackMsg.value = "密码已修改"; snackbar.value = true
   } catch {}
 }
@@ -177,9 +190,8 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
               <v-icon color="primary">mdi-web</v-icon>
               <span class="text-body-2">网站标题</span>
             </div>
-            <div class="d-flex align-center ga-2" style="flex:1;max-width:400px">
-              <v-text-field v-model="siteTitle" variant="outlined" hide-details density="compact" placeholder="网站标题" style="width:100%" @keyup.enter="saveSiteTitle" />
-              <v-btn size="small" variant="tonal" color="primary" @click="saveSiteTitle">保存</v-btn>
+            <div>
+              <v-btn size="small" variant="tonal" color="primary" @click="openTitleDialog">修改</v-btn>
             </div>
           </div>
           <v-divider />
@@ -196,9 +208,8 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
               <v-icon color="primary">mdi-certificate-outline</v-icon>
               <span class="text-body-2">备案号</span>
             </div>
-            <div class="d-flex align-center ga-2" style="flex:1;max-width:400px">
-              <v-text-field v-model="siteIcp" variant="outlined" hide-details density="compact" placeholder="沪ICP备xxxxxxxx号" style="width:100%" @keyup.enter="saveSiteIcp" />
-              <v-btn size="small" variant="tonal" color="primary" @click="saveSiteIcp">保存</v-btn>
+            <div>
+              <v-btn size="small" variant="tonal" color="primary" @click="openIcpDialog">修改</v-btn>
             </div>
           </div>
           <v-divider />
@@ -260,21 +271,18 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
               <v-icon color="primary">mdi-account-edit</v-icon>
               <span class="text-body-2">昵称</span>
             </div>
-            <div class="d-flex align-center ga-2" style="flex:1;max-width:400px">
-              <v-text-field v-model="nickInput" variant="outlined" hide-details density="compact" placeholder="设置昵称" style="width:100%" @keyup.enter="saveNickname" />
-              <v-btn size="small" variant="tonal" color="primary" @click="saveNickname">保存</v-btn>
+            <div>
+              <v-btn size="small" variant="tonal" color="primary" @click="openNickDialog">修改</v-btn>
             </div>
           </div>
-          <div v-if="nickError" class="text-caption text-error">{{ nickError }}</div>
           <v-divider />
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center ga-3">
               <v-icon color="primary">mdi-lock-reset</v-icon>
               <span class="text-body-2">修改密码</span>
             </div>
-            <div class="d-flex align-center ga-1" style="flex:1;max-width:400px"><v-text-field v-model="oldPwd" type="password" variant="outlined" hide-details density="compact" placeholder="旧密码" style="flex:1;min-width:120px" />
-              <v-text-field v-model="newPwd" type="password" variant="outlined" hide-details density="compact" placeholder="新密码（至少4位）" style="flex:1;min-width:120px" />
-              <v-btn size="small" variant="tonal" color="primary" @click="savePassword">修改</v-btn>
+            <div>
+              <v-btn size="small" variant="tonal" color="primary" @click="openPwdDialog">修改</v-btn>
             </div>
           </div>
           <v-divider />
@@ -302,6 +310,68 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
       <AvatarPicker v-model="showAvatarPicker" />
     </template>
     <div class="text-center text-caption text-medium-emphasis pt-4">v1.0.0</div>
+  <!-- Nickname Dialog -->
+    <v-dialog v-model="showNickDialog" max-width="400">
+      <v-card class="rounded-xl pa-4">
+        <v-card-title class="text-subtitle-1 font-weight-medium px-0">修改昵称</v-card-title>
+        <v-card-text class="px-0">
+          <v-text-field v-model="nickInput" variant="outlined" hide-details density="compact" placeholder="设置昵称" @keyup.enter="saveNickname" autofocus />
+          <div v-if="nickError" class="text-caption text-error mt-1">{{ nickError }}</div>
+        </v-card-text>
+        <v-card-actions class="px-0">
+          <v-spacer />
+          <v-btn variant="text" @click="showNickDialog = false">取消</v-btn>
+          <v-btn variant="tonal" color="primary" @click="saveNickname">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Password Dialog -->
+    <v-dialog v-model="showPwdDialog" max-width="400">
+      <v-card class="rounded-xl pa-4">
+        <v-card-title class="text-subtitle-1 font-weight-medium px-0">修改密码</v-card-title>
+        <v-card-text class="px-0 d-flex flex-column ga-3">
+          <v-text-field v-model="pwdOld" type="password" variant="outlined" hide-details density="compact" placeholder="旧密码" autofocus />
+          <v-text-field v-model="pwdNew" type="password" variant="outlined" hide-details density="compact" placeholder="新密码（至少4位）" />
+          <v-text-field v-model="pwdConfirm" type="password" variant="outlined" hide-details density="compact" placeholder="确认新密码" />
+        </v-card-text>
+        <v-card-actions class="px-0">
+          <v-spacer />
+          <v-btn variant="text" @click="showPwdDialog = false">取消</v-btn>
+          <v-btn variant="tonal" color="primary" @click="savePassword">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Site Title Dialog -->
+    <v-dialog v-model="showTitleDialog" max-width="400">
+      <v-card class="rounded-xl pa-4">
+        <v-card-title class="text-subtitle-1 font-weight-medium px-0">修改网站标题</v-card-title>
+        <v-card-text class="px-0">
+          <v-text-field v-model="titleInput" variant="outlined" hide-details density="compact" placeholder="网站标题" @keyup.enter="saveSiteTitle" autofocus />
+        </v-card-text>
+        <v-card-actions class="px-0">
+          <v-spacer />
+          <v-btn variant="text" @click="showTitleDialog = false; siteTitle = siteTitle">取消</v-btn>
+          <v-btn variant="tonal" color="primary" @click="siteTitle = titleInput; saveSiteTitle()">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- ICP Dialog -->
+    <v-dialog v-model="showIcpDialog" max-width="400">
+      <v-card class="rounded-xl pa-4">
+        <v-card-title class="text-subtitle-1 font-weight-medium px-0">修改备案号</v-card-title>
+        <v-card-text class="px-0">
+          <v-text-field v-model="icpInput" variant="outlined" hide-details density="compact" placeholder="沪ICP备xxxxxxxx号" @keyup.enter="saveSiteIcp" autofocus />
+        </v-card-text>
+        <v-card-actions class="px-0">
+          <v-spacer />
+          <v-btn variant="text" @click="showIcpDialog = false; siteIcp = siteIcp">取消</v-btn>
+          <v-btn variant="tonal" color="primary" @click="siteIcp = icpInput; saveSiteIcp()">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 

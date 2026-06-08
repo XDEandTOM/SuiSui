@@ -36,7 +36,6 @@ const userRole = ref("user")
           userNickname.value = data.nickname || ""
           userRole.value = data.role || "user"
       userThemeColor.value = data.theme_color || "#1976D2"
-          userThemeColor.value = data.theme_color || "#1976D2"
           localStorage.setItem(AVATAR_KEY, data.avatar || "")
           localStorage.setItem(NICK_KEY, data.nickname || "")
         } else {
