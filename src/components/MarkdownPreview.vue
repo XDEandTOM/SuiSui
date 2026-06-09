@@ -43,6 +43,7 @@ const props = defineProps<{ content: string; searchQuery?: string }>()
 const zoomedImage = ref("")
 
 function highlightText(text: string, query: string): string {
+  if (!text) return text
   if (!query || !query.trim()) return text
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   return text.replace(new RegExp(`(${escaped})`, "gi"), "<mark>$1</mark>")

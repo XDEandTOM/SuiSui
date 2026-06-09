@@ -102,9 +102,9 @@ const allTags = computed(() => {
 
 const filteredNotes = computed(() => {
   let list = store.notes
-  if (searchQuery.value.trim()) {
+  if (searchQuery.value && searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase()
-    list = list.filter(n => n.content.toLowerCase().includes(q) || (n.tags && Array.isArray(n.tags) && n.tags.some(t => t.toLowerCase().includes(q))))
+    list = list.filter(n => n.content && n.content.toLowerCase().includes(q) || (n.tags && Array.isArray(n.tags) && n.tags.some(t => t && t.toLowerCase().includes(q))))
   }
   if (selectedTag.value) list = list.filter(n => n.tags && Array.isArray(n.tags) && n.tags.includes(selectedTag.value))
   return list
