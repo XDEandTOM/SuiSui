@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -53,6 +54,7 @@ func resetLoginRateLimit(ip string) {
 }
 
 var db *sql.DB
+var dataDir = "."
 
 // execSQL executes a statement and logs any error without returning it.
 // Use for best-effort operations (cache, cleanup, startup).
@@ -67,10 +69,14 @@ var allowedUploadExts = map[string]bool{
 	".gif": true, ".webp": true, ".ico": true, ".bmp": true,
 }
 
+func uploadsDir() string {
+	return filepath.Join(dataDir, "uploads")
+}
+
 func initDB() {
-	dbPath := "suisui.db"
+	dbPath := filepath.Join(dataDir, "suisui.db")
 	_, err := os.Stat(dbPath)
-	os.MkdirAll("uploads", 0755)
+	os.MkdirAll(filepath.Join(dataDir, "uploads"), 0755)
 	db, err = sql.Open("sqlite", dbPath)
 	if err != nil {
 		log.Fatal(err)

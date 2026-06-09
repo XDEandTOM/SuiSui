@@ -24,10 +24,15 @@ func main() {
 	if port == "" {
 		port = "3001"
 	}
-	if len(os.Args) > 1 && os.Args[1] == "-port" && len(os.Args) > 2 {
-		port = os.Args[2]
+	for i := 1; i < len(os.Args)-1; i++ {
+		switch os.Args[i] {
+		case "-port":
+			port = os.Args[i+1]
+		case "-data":
+			dataDir = os.Args[i+1]
+		}
 	}
-	log.Println("Server on :" + port)
+	log.Println("Server on :" + port + " (data: " + dataDir + ")")
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
@@ -77,7 +82,7 @@ func handleUploads(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	fullPath := filepath.Join("uploads", filePath)
+	fullPath := filepath.Join(uploadsDir(), filePath)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		http.NotFound(w, r)
 		return

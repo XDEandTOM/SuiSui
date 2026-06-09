@@ -237,7 +237,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request, path string) {
 			return
 		}
 		name := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
-		dst, err := os.Create(filepath.Join("uploads", name))
+		dst, err := os.Create(filepath.Join(uploadsDir(), name))
 		if err != nil {
 			errResp(w, "文件写入失败", 500)
 			return
