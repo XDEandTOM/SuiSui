@@ -113,7 +113,7 @@ docker run -d \
   --memory="256m" \
   -p 3001:3001 \
   -v suisui-data:/data \
-  linraintong/suisui:latest
+  linyumeng/suisui:latest
 ```
 
 或者使用 Docker Compose，创建 `docker-compose.yml`：
@@ -122,7 +122,7 @@ docker run -d \
 version: "3"
 services:
   suisui:
-    image: linraintong/suisui:latest
+    image: linyumeng/suisui:latest
     container_name: suisui
     ports:
       - "3001:3001"
