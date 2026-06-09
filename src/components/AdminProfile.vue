@@ -56,7 +56,7 @@ async function savePassword() {
 
 async function exportNotes() {
   try {
-    const res = await fetch(`/api/notes/export?username=${auth.userName}`)
+    const res = await authFetch(`/api/notes/export?username=${auth.userName}`)
     if (!res.ok) { snackMsg.value = "导出失败"; snackbar.value = true; return }
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
@@ -75,7 +75,7 @@ async function importNotes(e: Event) {
   try {
     const text = await file.text()
     const notes = JSON.parse(text)
-    const res = await fetch("/api/notes/import", {
+    const res = await authFetch("/api/notes/import", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(notes),
     })

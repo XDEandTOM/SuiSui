@@ -42,6 +42,15 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(path, "/auth/"):
 		handleAuth(w, r, path)
 	case strings.HasPrefix(path, "/notes"):
+		// Check for export/import endpoints
+		if path == "/notes/export" {
+			handleNotesExport(w, r)
+			return
+		}
+		if path == "/notes/import" {
+			handleNotesImport(w, r)
+			return
+		}
 		// Check for trash endpoints first, then notes
 		if strings.HasSuffix(path, "/restore") || strings.HasSuffix(path, "/hard-delete") || path == "/notes/trash" {
 			handleTrash(w, r, path)

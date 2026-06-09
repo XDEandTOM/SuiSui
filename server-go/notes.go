@@ -373,3 +373,94 @@ func batchGetReactions(ids []string) map[string]map[string][]string {
 	}
 	return result
 }
+
+// handleNotesExport exports all notes for the authenticated user as JSON.
+// GET /api/notes/export?username=xxx
+func handleNotesExport(w http.ResponseWriter, r *http.Request) {
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		errResp(w, "username required", 400)
+		return
+	}
+	tokenUser, tokenValid := verifyToken(r)
+	if !tokenValid || tokenUser != username {
+		errResp(w, "unauthorized", 401)
+		return
+	}
+	rows, err := db.Query("SELECT id, content, created_at, updated_at, pinned, tags, username, avatar, nickname FROM notes WHERE username=? ORDER BY created_at DESC", username)
+	if err != nil {
+		errResp(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+	var notes []map[string]interface{}
+	for rows.Next() {
+		var id, content, uname, tags, avatar, nickname string
+		var createdAt, updatedAt int64
+		var pinned int
+		if err := rows.Scan(&id, &content, &createdAt, &updatedAt, &pinned, &tags, &uname, &avatar, &nickname); err != nil {
+			continue
+		}
+		var tagList []string
+		json.Unmarshal([]byte(tags), &tagList)
+		notes = append(notes, map[string]interface{}{
+			"id": id, "content": content, "createdAt": createdAt, "updatedAt": updatedAt,
+			"pinned": pinned == 1, "tags": tagList, "username": uname,
+			"avatar": avatar, "nickname": nickname,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		errResp(w, err.Error(), 500)
+		return
+	}
+	if notes == nil {
+		notes = []map[string]interface{}{}
+	}
+	data, _ := json.MarshalIndent(notes, "", "  ")
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"suisui-notes-"+username+".json\"")
+	w.Write(data)
+}
+
+// handleNotesImport imports notes from a JSON array.
+// POST /api/notes/import
+func handleNotesImport(w http.ResponseWriter, r *http.Request) {
+	tokenUser, tokenValid := verifyToken(r)
+	if !tokenValid {
+		errResp(w, "unauthorized", 401)
+		return
+	}
+	var notes []struct {
+		Id        string   `json:"id"`
+		Content   string   `json:"content"`
+		CreatedAt int64    `json:"createdAt"`
+		UpdatedAt int64    `json:"updatedAt"`
+		Pinned    bool     `json:"pinned"`
+		Tags      []string `json:"tags"`
+		Username  string   `json:"username"`
+		Avatar    string   `json:"avatar"`
+		Nickname  string   `json:"nickname"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&notes); err != nil {
+		errResp(w, "无效的请求数据", 400)
+		return
+	}
+	imported := 0
+	for _, n := range notes {
+		// Only import notes belonging to the authenticated user
+		if n.Username != tokenUser {
+			continue
+		}
+		tagBytes, _ := json.Marshal(n.Tags)
+		pinned := 0
+		if n.Pinned {
+			pinned = 1
+		}
+		_, err := db.Exec("INSERT OR IGNORE INTO notes (id, content, created_at, updated_at, pinned, tags, username, avatar, nickname) VALUES (?,?,?,?,?,?,?,?,?)",
+			n.Id, n.Content, n.CreatedAt, n.UpdatedAt, pinned, string(tagBytes), n.Username, n.Avatar, n.Nickname)
+		if err == nil {
+			imported++
+		}
+	}
+	jsonResp(w, map[string]int{"imported": imported})
+}
