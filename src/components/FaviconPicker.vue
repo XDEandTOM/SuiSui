@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { ref } from "vue"
+import { authFetch } from "@/utils/api"
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>()
 const API = "/api"
@@ -13,10 +14,10 @@ async function onUpload(e: Event) {
   const fd = new FormData()
   fd.append("avatar", file)
   try {
-    const res = await fetch(API + "/auth/avatar/upload", { method: "POST", body: fd })
+    const res = await authFetch(API + "/auth/avatar/upload", { method: "POST", body: fd })
     const data = await res.json()
     if (data.success) {
-      await fetch(API + "/settings", {
+      await authFetch(API + "/settings", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: "site_favicon", value: data.url })
       })
