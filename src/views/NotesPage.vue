@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from "vue"
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue"
 import { useDisplay } from "vuetify"
 import { useNotesStore } from "@/stores/notes"
 import { useAuthStore } from "@/stores/auth"
@@ -19,6 +19,7 @@ const selectedTag = ref("")
 const siteIcp = ref("")
 const icpLink = "https://beian.miit.gov.cn/#/Integrated/index"
 onMounted(async () => { await store.fetchNotes(); await loadSiteIcp() })
+onBeforeUnmount(() => { zoomedUpload.value = "" })
 
 async function loadSiteIcp() {
   try {
@@ -80,9 +81,7 @@ async function fetchDeletedNotes() {
   try {
     const res = await fetch(`/api/notes/trash?username=${auth.userName}`)
     if (res.ok) {
-      const all = await res.json()
-      const hidden = JSON.parse(localStorage.getItem("suisui-hidden-trash") || "[]")
-      deletedNotes.value = all.filter((n: any) => !hidden.includes(n.id))
+      deletedNotes.value = await res.json()
     }
   } catch { }
 }
@@ -97,9 +96,6 @@ async function deleteForever(id: string) {
     const res = await fetch(`/api/notes/${id}/hard-delete?username=${auth.userName}`,{method:"DELETE"})
     if (res.ok) {
       deletedNotes.value = deletedNotes.value.filter(n => n.id !== id)
-      const hidden = JSON.parse(localStorage.getItem("suisui-hidden-trash") || "[]")
-      hidden.push(id)
-      localStorage.setItem("suisui-hidden-trash", JSON.stringify(hidden))
     }
   } catch { }
 }
@@ -115,7 +111,7 @@ async function submitInline() {
   let content = inlineContent.value
   for (const url of uploadedImages.value) content += "\n\n![](" + url + ")"
   if (editingNoteId.value) {
-    await store.updateNote(editingNoteId.value, content.trim(), tags)
+    await store.updateNote(editingNoteId.value, content.trim(), tags, auth.userName)
     editingNoteId.value = ""
   } else {
     await store.addNote(content.trim(), tags, auth.userName)
@@ -164,8 +160,9 @@ function handleEdit(memo: any) {
   const text = memo.content.replace(imgRegex, (_m: string, url: string) => { urls.push(url); return "" })
   inlineContent.value = text.trim()
   uploadedImages.value = urls
+  inlineTagsInput.value = memo.tags?.join(", ") || ""
   editingNoteId.value = memo.id
-  showInlineTags.value = false
+  showInlineTags.value = true
   nextTick(() => {
     const el = document.querySelector(".inline-textarea") as HTMLTextAreaElement
     if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px" }

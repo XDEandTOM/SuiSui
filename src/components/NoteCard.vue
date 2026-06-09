@@ -115,7 +115,7 @@ function timeAgo(ts: number) {
       </div>
     
       <div class="reactions-row">
-        <template v-for="(users, emoji) in memo.reactions" :key="emoji">
+        <template v-for="(users, emoji, ri) in memo.reactions" :key="ri">
           <v-chip v-if="users && users.length" size="x-small" variant="tonal"
             :class="['reaction-chip', { active: hasReacted(emoji) }]"
             @click="toggleReaction(emoji)">
@@ -134,7 +134,7 @@ function timeAgo(ts: number) {
                 @click="activeEmojiCat = cat.id">{{ cat.icon }}</v-btn>
             </div>
             <div class="emoji-grid pa-2">
-              <v-btn v-for="e in EMOJI_CATEGORIES.find(c => c.id === activeEmojiCat)?.list || []" :key="e"
+              <v-btn v-for="(e, ei) in EMOJI_CATEGORIES.find(c => c.id === activeEmojiCat)?.list || []" :key="activeEmojiCat + '-' + ei"
                 size="x-small" variant="text" class="emoji-btn"
                 @click="toggleReaction(e); showEmojiPicker = false">{{ e }}</v-btn>
             </div>

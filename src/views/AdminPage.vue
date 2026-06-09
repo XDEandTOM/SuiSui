@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue"
 import { useAuthStore } from "@/stores/auth"
-import AvatarPicker from "@/components/AvatarPicker.vue"
-import AppIconPicker from "@/components/AppIconPicker.vue"
-import FaviconPicker from "@/components/FaviconPicker.vue"
+import AdminProfile from "@/components/AdminProfile.vue"
+import AdminSystem from "@/components/AdminSystem.vue"
 
 const API = "/api"
 const auth = useAuthStore()
@@ -14,40 +13,12 @@ const stats = ref<null | any>(null)
 const users = ref<any[]>([])
 const loading = ref(false)
 const deleting = ref<null | number>(null)
-const nickError = ref("")
 const snackbar = ref(false)
 const snackMsg = ref("")
-const nickInput = ref(auth.userNickname)
-const showNickDialog = ref(false)
-const showPwdDialog = ref(false)
-const showTitleDialog = ref(false)
-const showIcpDialog = ref(false)
-const pwdOld = ref("")
-const pwdNew = ref("")
-const pwdConfirm = ref("")
-const titleInput = ref("")
-const icpInput = ref("")
-const showAvatarPicker = ref(false)
-const showAppIconPicker = ref(false)
-const showFaviconPicker = ref(false)
-const themeColorInput = ref(auth.userThemeColor)
-
-function onColorChange(e: Event) {
-  themeColorInput.value = (e.target as HTMLInputElement).value
-}
-
-async function saveThemeColor() {
-  await auth.updateThemeColor(themeColorInput.value)
-  snackMsg.value = '主题色已保存'; snackbar.value = true
-}
-const allowRegister = ref(true)
-const siteTitle = ref("")
-const siteIcp = ref("")
 
 onMounted(() => {
   if (auth.userRole !== "admin") tab.value = "profile"
-  else { loadData(); loadSettings() }
-  nickInput.value = auth.userNickname
+  else { loadData() }
 })
 
 watch(() => auth.userRole, (val) => { if (val !== "admin") tab.value = "profile" })
@@ -60,80 +31,20 @@ async function loadData() {
 async function loadStats() {
   try { const r = await fetch(API + "/admin/stats"); if (r.ok) stats.value = await r.json() } catch {}
 }
-async function loadUsers() {
-  try { const r = await fetch(API + "/admin/users"); if (r.ok) users.value = await r.json() } catch {}
-}
-async function loadSettings() {
-  try {
-    const r = await fetch(API + "/settings")
-    if (r.ok) {
-      const s = await r.json()
-      siteTitle.value = s.site_title || ""
-      siteIcp.value = s.site_icp || ""
-      document.title = s.site_title || "碎碎"
-      allowRegister.value = s.allow_register !== "false"
-    }
-  } catch {}
-}
-function openTitleDialog() { titleInput.value = siteTitle.value; showTitleDialog.value = true }
-function openIcpDialog() { icpInput.value = siteIcp.value; showIcpDialog.value = true }
-function openNickDialog() { nickInput.value = auth.userNickname; nickError.value = ""; showNickDialog.value = true }
-function openPwdDialog() { pwdOld.value = ""; pwdNew.value = ""; pwdConfirm.value = ""; showPwdDialog.value = true }
+const userPage = ref(1)
+const userTotal = ref(0)
+const userPerPage = ref(10)
 
-async function saveSiteTitle() {
-  try {
-    await fetch(API + "/settings", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: "site_title", value: siteTitle.value.trim() })
-    })
-    document.title = siteTitle.value.trim() || "碎碎"
-    snackMsg.value = "网站标题已保存"; snackbar.value = true; showTitleDialog.value = false
-  } catch {}
+async function loadUsers() {
+  try { const r = await fetch(API + "/admin/users?page=" + userPage.value + "&per_page=" + userPerPage.value); if (r.ok) { const d = await r.json(); users.value = d.users || []; userTotal.value = d.total || 0 } } catch {}
 }
-async function saveSiteIcp() {
-  try {
-    await fetch(API + "/settings", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: "site_icp", value: siteIcp.value.trim() })
-    })
-    snackMsg.value = "备案号已保存"; snackbar.value = true; showIcpDialog.value = false
-  } catch {}
-}
-async function toggleRegister(val: boolean) {
-  try {
-    await fetch(API + "/settings", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: "allow_register", value: val ? "true" : "false" })
-    })
-    snackMsg.value = val ? "已允许注册" : "已关闭注册"; snackbar.value = true
-  } catch {}
-}
+function prevPage() { if (userPage.value > 1) { userPage.value--; loadUsers() } }
+function nextPage() { if (userPage.value * userPerPage.value < userTotal.value) { userPage.value++; loadUsers() } }
 async function deleteUser(id: number) {
   if (!confirm("确定删除？")) return
   deleting.value = id
   try { await fetch(API + "/admin/users/" + id, { method: "DELETE" }); await loadData() } catch {}
   deleting.value = null
-}
-async function saveNickname() {
-  nickError.value = ""
-  if (!nickInput.value.trim()) return
-  const err = await auth.updateNickname(nickInput.value)
-  if (err) { nickError.value = err; return }
-  showNickDialog.value = false
-  snackMsg.value = "昵称已保存"; snackbar.value = true
-}
-async function savePassword() {
-  if (!pwdOld.value || !pwdNew.value || pwdNew.value.length < 4 || pwdNew.value !== pwdConfirm.value) return
-  try {
-    const res = await fetch(API + "/auth/password", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: auth.userName, oldPassword: pwdOld.value, newPassword: pwdNew.value })
-    })
-    const result = await res.json()
-    if (result.error) return
-    pwdOld.value = ""; pwdNew.value = ""; pwdConfirm.value = ""; showPwdDialog.value = false
-    snackMsg.value = "密码已修改"; snackbar.value = true
-  } catch {}
 }
 function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
 </script>
@@ -182,201 +93,56 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
     </template>
 
     <template v-if='tab === "system" && auth.isAdmin'>
-      <v-card variant="outlined" class="rounded-xl pa-6 mb-4 stat-card">
-        <h3 class="text-subtitle-1 font-weight-medium mb-4">系统设置</h3>
-        <div class="d-flex flex-column ga-4">
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center ga-3">
-              <v-icon color="primary">mdi-web</v-icon>
-              <span class="text-body-2">网站标题</span>
-            </div>
-            <div>
-              <v-btn size="small" variant="tonal" color="primary" @click="openTitleDialog">修改</v-btn>
-            </div>
-          </div>
-          <v-divider />
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center ga-3">
-              <v-icon color="primary">mdi-account-plus</v-icon>
-              <span class="text-body-2">允许新用户注册</span>
-            </div>
-            <v-switch v-model="allowRegister" hide-details density="compact" @update:model-value="toggleRegister" color="primary" />
-          </div>
-          <v-divider />
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center ga-3">
-              <v-icon color="primary">mdi-certificate-outline</v-icon>
-              <span class="text-body-2">备案号</span>
-            </div>
-            <div>
-              <v-btn size="small" variant="tonal" color="primary" @click="openIcpDialog">修改</v-btn>
-            </div>
-          </div>
-          <v-divider />
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center ga-3">
-              <v-icon color="primary">mdi-apps</v-icon>
-              <span class="text-body-2">工具栏图标</span>
-            </div>
-            <div class="d-flex align-center ga-2">
-              <v-btn size="small" variant="tonal" color="primary" @click="showAppIconPicker = true">修改</v-btn>
-            </div>
-          </div>
-          <v-divider />
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center ga-3">
-              <v-icon color="primary">mdi-image-multiple</v-icon>
-              <span class="text-body-2">网站图标 (Favicon)</span>
-            </div>
-            <div class="d-flex align-center ga-2">
-              <v-btn size="small" variant="tonal" color="primary" @click="showFaviconPicker = true">设置</v-btn>
-            </div>
-          </div>
-        </div>
-      </v-card>
-      <AppIconPicker v-model="showAppIconPicker" />
-      <FaviconPicker v-model="showFaviconPicker" />
+      <AdminSystem />
     </template>
 
     <template v-if='tab === "users" && auth.isAdmin'>
-      <v-card variant="outlined" class="rounded-xl stat-card">
-        <v-list lines="two" bg-color="transparent">
-          <v-list-item v-for="user in users" :key="user.id">
-            <template #prepend>
-              <v-avatar color="primary" variant="tonal">
-                <v-img v-if="user.avatar && (user.avatar.startsWith('/uploads/') || user.avatar.startsWith('http'))" :src="user.avatar" alt="" cover />
-                <span v-else class="font-weight-medium">{{ (user.nickname || user.username).charAt(0).toUpperCase() }}</span>
-              </v-avatar>
-            </template>
-            <v-list-item-title>{{ user.nickname || user.username }}</v-list-item-title>
-            <v-list-item-subtitle>@{{ user.username }} - {{ formatDate(user.createdAt) }} - {{ user.memoCount }}条 -
-              <v-chip size="x-small" :color="user.role === 'admin' ? 'primary' : 'default'" variant="tonal">
-                {{ user.role === 'admin' ? '管理员' : '普通用户' }}
-              </v-chip>
-            </v-list-item-subtitle>
-            <template #append>
-              <v-btn v-if="user.username !== auth.userName" icon="mdi-delete" size="small" variant="text" color="error" :loading="deleting === user.id" @click="deleteUser(user.id)" />
-            </template>
-          </v-list-item>
-        </v-list>
+      <v-card variant="outlined" class="rounded-xl pa-4 mb-4 stat-card">
+        <h3 class="text-subtitle-1 font-weight-medium mb-4 px-2">用户管理</h3>
+        <div v-if="loading" class="d-flex justify-center py-12">
+          <v-progress-circular indeterminate color="primary" size="40" />
+        </div>
+        <div v-else-if="!users.length" class="text-center py-8 text-medium-emphasis text-body-2">暂无用户</div>
+        <div v-else class="d-flex flex-column">
+          <div v-for="u in users" :key="u.id" class="d-flex align-center pa-3 user-row">
+            <div class="d-flex align-center ga-3 flex-grow-1" style="min-width:0">
+              <v-avatar size="36" color="primary" variant="tonal">{{ u.nickname?.charAt(0)?.toUpperCase() || u.username.charAt(0).toUpperCase() }}</v-avatar>
+              <div style="min-width:0">
+                <div class="text-body-2 font-weight-medium text-truncate">{{ u.nickname || u.username }}</div>
+                <div class="text-caption text-medium-emphasis">
+                  @{{ u.username }} · {{ u.role === "admin" ? "管理员" : "用户" }} · {{ u.memoCount }} 条备忘
+                </div>
+              </div>
+            </div>
+            <div class="text-caption text-medium-emphasis mr-3">{{ formatDate(u.createdAt) }}</div>
+            <v-btn v-if="u.role !== 'admin'" icon="mdi-delete" size="x-small" variant="text" color="error"
+              :loading="deleting === u.id" @click="deleteUser(u.id)" />
+          </div>
+          <div v-if="users.length" class="d-flex align-center justify-center ga-3 pt-3 px-2">
+            <v-btn size="small" variant="tonal" :disabled="userPage <= 1" @click="prevPage">
+              <v-icon>mdi-chevron-left</v-icon> 上一页
+            </v-btn>
+            <span class="text-caption text-medium-emphasis">{{ userPage }} / {{ Math.ceil(userTotal / userPerPage) || 1 }}</span>
+            <v-btn size="small" variant="tonal" :disabled="userPage * userPerPage >= userTotal" @click="nextPage">
+              下一页 <v-icon>mdi-chevron-right</v-icon>
+            </v-btn>
+          </div>
+        </div>
       </v-card>
     </template>
 
     <template v-if='tab === "profile"'>
-      <v-card variant="outlined" class="rounded-xl pa-6 mb-4 stat-card">
-        <h3 class="text-subtitle-1 font-weight-medium mb-4">个人资料</h3>
-        <div class="d-flex flex-column ga-4">
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center ga-3">
-              <v-icon color="primary">mdi-account-edit</v-icon>
-              <span class="text-body-2">昵称</span>
-            </div>
-            <div>
-              <v-btn size="small" variant="tonal" color="primary" @click="openNickDialog">修改</v-btn>
-            </div>
-          </div>
-          <v-divider />
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center ga-3">
-              <v-icon color="primary">mdi-lock-reset</v-icon>
-              <span class="text-body-2">修改密码</span>
-            </div>
-            <div>
-              <v-btn size="small" variant="tonal" color="primary" @click="openPwdDialog">修改</v-btn>
-            </div>
-          </div>
-          <v-divider />
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center ga-3">
-              <v-icon color="primary">mdi-account-circle</v-icon>
-              <span class="text-body-2">头像</span>
-            </div>
-            <v-btn size="small" variant="tonal" color="primary" @click="showAvatarPicker = true">修改</v-btn>
-          </div>
-          <v-divider />
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center ga-3">
-              <v-icon color="primary">mdi-palette</v-icon>
-              <span class="text-body-2">主题色</span>
-            </div>
-            <div class="d-flex align-center ga-2">
-              <input type="color" :value="auth.userThemeColor" @input="onColorChange"
-                class="theme-picker" />
-              <v-btn size="small" variant="tonal" color="primary" @click="saveThemeColor">保存</v-btn>
-            </div>
-          </div>
-        </div>
-      </v-card>
-      <AvatarPicker v-model="showAvatarPicker" />
+      <AdminProfile />
     </template>
-    <div class="text-center text-caption text-medium-emphasis pt-4">v1.1.0</div>
-  <!-- Nickname Dialog -->
-    <v-dialog v-model="showNickDialog" max-width="400">
-      <v-card class="rounded-xl pa-4">
-        <v-card-title class="text-subtitle-1 font-weight-medium px-0">修改昵称</v-card-title>
-        <v-card-text class="px-0">
-          <v-text-field v-model="nickInput" variant="outlined" hide-details density="compact" placeholder="设置昵称" @keyup.enter="saveNickname" autofocus />
-          <div v-if="nickError" class="text-caption text-error mt-1">{{ nickError }}</div>
-        </v-card-text>
-        <v-card-actions class="px-0">
-          <v-spacer />
-          <v-btn variant="text" @click="showNickDialog = false">取消</v-btn>
-          <v-btn variant="tonal" color="primary" @click="saveNickname">保存</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
 
-    <!-- Password Dialog -->
-    <v-dialog v-model="showPwdDialog" max-width="400">
-      <v-card class="rounded-xl pa-4">
-        <v-card-title class="text-subtitle-1 font-weight-medium px-0">修改密码</v-card-title>
-        <v-card-text class="px-0 d-flex flex-column ga-3">
-          <v-text-field v-model="pwdOld" type="password" variant="outlined" hide-details density="compact" placeholder="旧密码" autofocus />
-          <v-text-field v-model="pwdNew" type="password" variant="outlined" hide-details density="compact" placeholder="新密码（至少4位）" />
-          <v-text-field v-model="pwdConfirm" type="password" variant="outlined" hide-details density="compact" placeholder="确认新密码" />
-        </v-card-text>
-        <v-card-actions class="px-0">
-          <v-spacer />
-          <v-btn variant="text" @click="showPwdDialog = false">取消</v-btn>
-          <v-btn variant="tonal" color="primary" @click="savePassword">保存</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Site Title Dialog -->
-    <v-dialog v-model="showTitleDialog" max-width="400">
-      <v-card class="rounded-xl pa-4">
-        <v-card-title class="text-subtitle-1 font-weight-medium px-0">修改网站标题</v-card-title>
-        <v-card-text class="px-0">
-          <v-text-field v-model="titleInput" variant="outlined" hide-details density="compact" placeholder="网站标题" @keyup.enter="saveSiteTitle" autofocus />
-        </v-card-text>
-        <v-card-actions class="px-0">
-          <v-spacer />
-          <v-btn variant="text" @click="showTitleDialog = false; siteTitle = siteTitle">取消</v-btn>
-          <v-btn variant="tonal" color="primary" @click="siteTitle = titleInput; saveSiteTitle()">保存</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- ICP Dialog -->
-    <v-dialog v-model="showIcpDialog" max-width="400">
-      <v-card class="rounded-xl pa-4">
-        <v-card-title class="text-subtitle-1 font-weight-medium px-0">修改备案号</v-card-title>
-        <v-card-text class="px-0">
-          <v-text-field v-model="icpInput" variant="outlined" hide-details density="compact" placeholder="沪ICP备xxxxxxxx号" @keyup.enter="saveSiteIcp" autofocus />
-        </v-card-text>
-        <v-card-actions class="px-0">
-          <v-spacer />
-          <v-btn variant="text" @click="showIcpDialog = false; siteIcp = siteIcp">取消</v-btn>
-          <v-btn variant="tonal" color="primary" @click="siteIcp = icpInput; saveSiteIcp()">保存</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <div class="text-center text-caption text-medium-emphasis pt-4">v1.2.0</div>
   </v-container>
 </template>
 
 <style scoped>
 .stat-card { border-color: #424242 !important; }
+.user-row { border-bottom: 1px solid rgba(var(--v-theme-on-surface),0.06); }
+.user-row:last-child { border-bottom: none; }
 .theme-picker { width: 36px; height: 36px; border: none; border-radius: 50%; cursor: pointer; padding: 0; background: none; }
 .theme-picker::-webkit-color-swatch-wrapper { padding: 0; }
 .theme-picker::-webkit-color-swatch { border: 2px solid rgba(var(--v-theme-on-surface), 0.15); border-radius: 50%; }
@@ -386,4 +152,3 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
   .admin-container :deep(.v-tab) { min-width: auto; padding: 0 12px; font-size: 0.8rem; }
 }
 </style>
-

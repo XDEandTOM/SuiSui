@@ -1,8 +1,26 @@
 ﻿<script setup lang="ts">
-import { ref, computed } from "vue"
+import { ref, computed, onMounted, watch } from "vue"
 import { marked } from "marked"
 import hljs from "highlight.js"
-import "highlight.js/styles/github.css"
+import { useTheme } from "vuetify"
+
+const theme = useTheme()
+const isDark = computed(() => theme.global.name.value === "dark")
+
+function loadHighlightTheme(dark: boolean) {
+  const id = "hljs-theme"
+  let link = document.getElementById(id) as HTMLLinkElement
+  if (!link) {
+    link = document.createElement("link")
+    link.id = id
+    link.rel = "stylesheet"
+    document.head.appendChild(link)
+  }
+  link.href = dark ? "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" : "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
+}
+
+onMounted(() => loadHighlightTheme(theme.global.name.value === "dark"))
+watch(isDark, (v) => loadHighlightTheme(v))
 
 const renderer = new marked.Renderer()
 renderer.code = ({ text, lang }) => {
@@ -12,9 +30,9 @@ renderer.code = ({ text, lang }) => {
     else highlighted = hljs.highlightAuto(text).value
   } catch { highlighted = text }
   const langAttr = lang ? ` class="language-${lang}"` : ""
-  const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")
+  const encoded = encodeURIComponent(text)
   return `<div class="code-block-wrapper">
-    <button class="copy-btn" data-code="${escaped}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    <button class="copy-btn" data-code="${encoded}"><svg style="pointer-events:none" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
     <pre><code${langAttr}>${highlighted}</code></pre>
   </div>`
 }
@@ -62,11 +80,15 @@ function handleClick(e: MouseEvent) {
   }
   const copyBtn = target.closest(".copy-btn") as HTMLElement
   if (!copyBtn) return
-  const code = copyBtn.getAttribute("data-code")
-  if (!code) return
-  const clipboard = navigator.clipboard
-  function doCopy(text) {
-    if (clipboard) return clipboard.writeText(text)
+  const raw = copyBtn.getAttribute("data-code")
+  if (!raw) return
+  const code = decodeURIComponent(raw)
+  function doCopy(text: string) {
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        return navigator.clipboard.writeText(text)
+      }
+    } catch {}
     const ta = document.createElement("textarea")
     ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"
     document.body.appendChild(ta); ta.select()

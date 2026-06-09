@@ -26,7 +26,8 @@ const days = computed(() => {
   const firstDay = new Date(year, month, 1)
   const lastDay = new Date(year, month + 1, 0)
   const countMap = new Map<string, number>()
-  for (const note of store.notes) {
+  const notes = Array.isArray(store.notes) ? store.notes : []
+  for (const note of notes) {
     const d = new Date(note.createdAt)
     if (d.getFullYear() === year && d.getMonth() === month) {
       const key = d.getDate().toString()
@@ -112,7 +113,7 @@ function formatTooltip(day: number, count: number) {
 .day-cell:hover { transform: scale(1.2); outline: 2px solid rgba(var(--v-theme-primary), 0.3); z-index: 1; }
 .today { outline: 2px solid rgba(var(--v-theme-primary), 0.5); font-weight: 700; }
 .empty-cell { visibility: hidden; }
-.level-0 { background: rgba(var(--v-theme-on-surface), 0.04); color: rgba(var(--v-theme-on-surface), 0.5); }
+.level-0 { background: rgba(var(--v-theme-primary), 0.06); color: rgba(var(--v-theme-on-surface), 0.5); }
 .level-1 { background: rgba(var(--v-theme-primary), 0.25); }
 .level-2 { background: rgba(var(--v-theme-primary), 0.45); }
 .level-3 { background: rgba(var(--v-theme-primary), 0.7); color: #fff; }

@@ -103,9 +103,12 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
       </div>
     </div>
 
-    <v-main class="main-bg" :class="{ 'has-sidebar': !isMobile, 'has-bottom-bar': isMobile }">
+    <v-main v-if="auth.ready" class="main-bg" :class="{ 'has-sidebar': !isMobile, 'has-bottom-bar': isMobile }">
       <AdminPage v-if="showAdmin" @back="showAdmin = false" />
       <NotesPage v-else :mobile-heatmap="showMobileHeatmap" @close-heatmap="showMobileHeatmap = false" />
+    </v-main>
+    <v-main v-else class="main-bg d-flex align-center justify-center" :class="{ 'has-sidebar': !isMobile, 'has-bottom-bar': isMobile }">
+      <v-progress-circular indeterminate color="primary" />
     </v-main>
     <LoginDialog v-model="showLogin" />
   </v-app>
