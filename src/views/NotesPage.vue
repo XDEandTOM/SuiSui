@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue"
 import { useDisplay } from "vuetify"
 import { useNotesStore } from "@/stores/notes"
@@ -206,7 +206,7 @@ function handleEdit(memo: any) {
           </div>
         </v-card>
         <div v-if="versionText" class="d-flex justify-center mt-2">
-          <v-chip size="x-small" variant="tonal" color="primary" class="version-chip">{{ versionText }}</v-chip>
+          <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="window.open('https://github.com/Linraintong/SuiSui', '_blank')" style="cursor:pointer">{{ versionText }}</v-chip>
         </div>
       </div>
     </div>
@@ -233,7 +233,7 @@ function handleEdit(memo: any) {
             </div>
           </v-card>
           <div v-if="versionText" class="d-flex justify-center mt-2">
-            <v-chip size="x-small" variant="tonal" color="primary" class="version-chip">{{ versionText }}</v-chip>
+            <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="window.open('https://github.com/Linraintong/SuiSui', '_blank')" style="cursor:pointer">{{ versionText }}</v-chip>
           </div>
         </v-card>
       </v-dialog>
