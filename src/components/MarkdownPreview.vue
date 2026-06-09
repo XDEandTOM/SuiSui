@@ -46,7 +46,12 @@ function highlightText(text: string, query: string): string {
   if (!text) return text
   if (!query || !query.trim()) return text
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  return text.replace(new RegExp(`(${escaped})`, "gi"), "<mark>$1</mark>")
+  const re = new RegExp(`(${escaped})`, "gi")
+  // Split into image URLs and text, only highlight text parts
+  return text.split(/(!\[.*?\]\(.*?\))/g).map(seg => {
+    if (seg.startsWith("![")) return seg // skip image markdown
+    return seg.replace(re, "<mark>$1</mark>")
+  }).join("")
 }
 
 const rendered = computed(() => {

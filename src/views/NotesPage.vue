@@ -104,7 +104,10 @@ const filteredNotes = computed(() => {
   let list = store.notes
   if (searchQuery.value && searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase()
-    list = list.filter(n => n.content && n.content.toLowerCase().includes(q) || (n.tags && Array.isArray(n.tags) && n.tags.some(t => t && t.toLowerCase().includes(q))))
+    list = list.filter(n => {
+      const text = (n.content || "").replace(/!\[.*?\]\(.+?\)/g, "").toLowerCase()
+      return text.includes(q) || (n.tags && Array.isArray(n.tags) && n.tags.some(t => t && t.toLowerCase().includes(q)))
+    })
   }
   if (selectedTag.value) list = list.filter(n => n.tags && Array.isArray(n.tags) && n.tags.includes(selectedTag.value))
   return list
