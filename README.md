@@ -13,10 +13,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/Linraintong/SuiSui?style=flat-square&label=版本" alt="Release"/>
-  <img src="https://img.shields.io/github/license/Linraintong/SuiSui?style=flat-square&label=许可证" alt="License"/>
-  <img src="https://img.shields.io/github/last-commit/Linraintong/SuiSui?style=flat-square&label=最近更新" alt="Last Commit"/>
-  <img src="https://img.shields.io/github/repo-size/Linraintong/SuiSui?style=flat-square&label=仓库大小" alt="Repo Size"/>
+  <a href="https://github.com/Linraintong/SuiSui/releases"><img src="https://img.shields.io/github/v/tag/Linraintong/SuiSui?style=flat-square" alt="Release"/></a>
+  <a href="https://github.com/Linraintong/SuiSui/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Linraintong/SuiSui?style=flat-square" alt="License"/></a>
+  <a href="https://github.com/Linraintong/SuiSui/commits/main"><img src="https://img.shields.io/github/last-commit/Linraintong/SuiSui?style=flat-square" alt="Last Commit"/></a>
+  <a href="https://github.com/Linraintong/SuiSui"><img src="https://img.shields.io/github/repo-size/Linraintong/SuiSui?style=flat-square" alt="Repo Size"/></a>
 </p>
 
 </div>
