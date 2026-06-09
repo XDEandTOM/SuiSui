@@ -204,8 +204,10 @@ function handleEdit(memo: any) {
             </v-chip>
             <div v-if="!allTags.length" class="text-caption text-medium-emphasis py-2">暂无标签</div>
           </div>
-          <div v-if="versionText" class="text-caption text-medium-emphasis text-center mt-1" style="opacity:0.4;font-size:0.65rem">{{ versionText }}</div>
         </v-card>
+        <div v-if="versionText" class="d-flex justify-center mt-2">
+          <v-chip size="x-small" variant="tonal" color="primary" class="version-chip">{{ versionText }}</v-chip>
+        </div>
       </div>
     </div>
 
@@ -229,8 +231,10 @@ function handleEdit(memo: any) {
               </v-chip>
               <div v-if="!allTags.length" class="text-caption text-medium-emphasis py-2">暂无标签</div>
             </div>
-            <div v-if="versionText" class="text-caption text-medium-emphasis text-center mt-1" style="opacity:0.4;font-size:0.65rem">{{ versionText }}</div>
           </v-card>
+          <div v-if="versionText" class="d-flex justify-center mt-2">
+            <v-chip size="x-small" variant="tonal" color="primary" class="version-chip">{{ versionText }}</v-chip>
+          </div>
         </v-card>
       </v-dialog>
 
