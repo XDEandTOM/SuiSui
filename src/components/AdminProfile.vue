@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from "vue"
 import { useAuthStore } from "@/stores/auth"
+import { authFetch } from "@/utils/api"
 import AvatarPicker from "@/components/AvatarPicker.vue"
 
 const auth = useAuthStore()
-const emit = defineEmits<{ back: [] }>()
 
 const snackbar = ref(false)
 const snackMsg = ref("")
@@ -43,7 +43,7 @@ async function saveNickname() {
 async function savePassword() {
   if (!pwdOld.value || !pwdNew.value || pwdNew.value.length < 4 || pwdNew.value !== pwdConfirm.value) return
   try {
-    const res = await fetch("/api/auth/password", {
+    const res = await authFetch("/api/auth/password", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: auth.userName, oldPassword: pwdOld.value, newPassword: pwdNew.value })
     })

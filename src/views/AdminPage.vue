@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue"
 import { useAuthStore } from "@/stores/auth"
+import { authFetch } from "@/utils/api"
 import AdminProfile from "@/components/AdminProfile.vue"
 import AdminSystem from "@/components/AdminSystem.vue"
 
@@ -13,8 +14,6 @@ const stats = ref<null | any>(null)
 const users = ref<any[]>([])
 const loading = ref(false)
 const deleting = ref<null | number>(null)
-const snackbar = ref(false)
-const snackMsg = ref("")
 
 onMounted(() => {
   if (auth.userRole !== "admin") tab.value = "profile"
@@ -29,21 +28,21 @@ async function loadData() {
   loading.value = false
 }
 async function loadStats() {
-  try { const r = await fetch(API + "/admin/stats"); if (r.ok) stats.value = await r.json() } catch {}
+  try { const r = await authFetch(API + "/admin/stats"); if (r.ok) stats.value = await r.json() } catch {}
 }
 const userPage = ref(1)
 const userTotal = ref(0)
 const userPerPage = ref(10)
 
 async function loadUsers() {
-  try { const r = await fetch(API + "/admin/users?page=" + userPage.value + "&per_page=" + userPerPage.value); if (r.ok) { const d = await r.json(); users.value = d.users || []; userTotal.value = d.total || 0 } } catch {}
+  try { const r = await authFetch(API + "/admin/users?page=" + userPage.value + "&per_page=" + userPerPage.value); if (r.ok) { const d = await r.json(); users.value = d.users || []; userTotal.value = d.total || 0 } } catch {}
 }
 function prevPage() { if (userPage.value > 1) { userPage.value--; loadUsers() } }
 function nextPage() { if (userPage.value * userPerPage.value < userTotal.value) { userPage.value++; loadUsers() } }
 async function deleteUser(id: number) {
   if (!confirm("确定删除？")) return
   deleting.value = id
-  try { await fetch(API + "/admin/users/" + id, { method: "DELETE" }); await loadData() } catch {}
+  try { await authFetch(API + "/admin/users/" + id, { method: "DELETE" }); await loadData() } catch {}
   deleting.value = null
 }
 function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
@@ -51,9 +50,6 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
 
 <template>
   <v-container fluid class="pa-6 admin-container" style="max-width:900px">
-    <v-snackbar v-model="snackbar" :timeout="2000" location="top right" color="success" variant="tonal">
-      {{ snackMsg }}
-    </v-snackbar>
     <div class="d-flex align-center mb-4">
       <v-btn icon="mdi-arrow-left" variant="text" size="small" class="mr-2" @click="emit('back')" />
       <div>

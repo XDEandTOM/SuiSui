@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue"
 import { useDisplay } from "vuetify"
 import { useNotesStore } from "@/stores/notes"
 import { useAuthStore } from "@/stores/auth"
+import { authFetch } from "@/utils/api"
 import NoteCard from "@/components/NoteCard.vue"
 import Heatmap from "@/components/Heatmap.vue"
 
@@ -31,6 +32,8 @@ async function loadSiteIcp() {
     }
   } catch { /* ignore */ }
 }
+
+function openGithub() { window.open("https://github.com/Linraintong/SuiSui", "_blank") }
 
 async function fetchVersion() {
   try {
@@ -90,7 +93,7 @@ function insertQuote() { insertMd("\n> ","","引用") }
 
 async function fetchDeletedNotes() {
   try {
-    const res = await fetch(`/api/notes/trash?username=${auth.userName}`)
+    const res = await authFetch(`/api/notes/trash?username=${auth.userName}`)
     if (res.ok) {
       deletedNotes.value = await res.json()
     }
@@ -98,13 +101,13 @@ async function fetchDeletedNotes() {
 }
 async function restoreNote(id) {
   try {
-    const res = await fetch(`/api/notes/${id}/restore?username=${auth.userName}`,{method:"PATCH"})
+    const res = await authFetch(`/api/notes/${id}/restore?username=${auth.userName}`,{method:"PATCH"})
     if (res.ok) { deletedNotes.value = deletedNotes.value.filter(n=>n.id!==id); await store.fetchNotes() }
   } catch { }
 }
 async function deleteForever(id: string) {
   try {
-    const res = await fetch(`/api/notes/${id}/hard-delete?username=${auth.userName}`,{method:"DELETE"})
+    const res = await authFetch(`/api/notes/${id}/hard-delete?username=${auth.userName}`,{method:"DELETE"})
     if (res.ok) {
       deletedNotes.value = deletedNotes.value.filter(n => n.id !== id)
     }
@@ -206,7 +209,7 @@ function handleEdit(memo: any) {
           </div>
         </v-card>
         <div v-if="versionText" class="d-flex justify-center mt-2">
-          <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="window.open('https://github.com/Linraintong/SuiSui', '_blank')" style="cursor:pointer">{{ versionText }}</v-chip>
+          <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="openGithub" style="cursor:pointer">{{ versionText }}</v-chip>
         </div>
       </div>
     </div>
@@ -233,7 +236,7 @@ function handleEdit(memo: any) {
             </div>
           </v-card>
           <div v-if="versionText" class="d-flex justify-center mt-2">
-            <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="window.open('https://github.com/Linraintong/SuiSui', '_blank')" style="cursor:pointer">{{ versionText }}</v-chip>
+            <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="openGithub" style="cursor:pointer">{{ versionText }}</v-chip>
           </div>
         </v-card>
       </v-dialog>

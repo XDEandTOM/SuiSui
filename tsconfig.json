@@ -4,7 +4,8 @@
     "strict": false, "jsx": "preserve", "resolveJsonModule": true,
     "isolatedModules": true, "esModuleInterop": true, "lib": ["ESNext", "DOM"],
     "skipLibCheck": true, "noEmit": true, "paths": { "@/*": ["./src/*"] },
-    "baseUrl": "."
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*.ts", "src/**/*.vue"]
 }

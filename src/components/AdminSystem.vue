@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue"
+import { authFetch } from "@/utils/api"
 import AppIconPicker from "@/components/AppIconPicker.vue"
 import FaviconPicker from "@/components/FaviconPicker.vue"
-
-const emit = defineEmits<{ back: [] }>()
 
 const API = "/api"
 const allowRegister = ref(true)
@@ -36,7 +35,7 @@ function openIcpDialog() { icpInput.value = siteIcp.value; showIcpDialog.value =
 
 async function saveSiteTitle() {
   try {
-    await fetch(API + "/settings", {
+    await authFetch(API + "/settings", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key: "site_title", value: siteTitle.value.trim() })
     })
@@ -46,7 +45,7 @@ async function saveSiteTitle() {
 }
 async function saveSiteIcp() {
   try {
-    await fetch(API + "/settings", {
+    await authFetch(API + "/settings", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key: "site_icp", value: siteIcp.value.trim() })
     })
@@ -55,7 +54,7 @@ async function saveSiteIcp() {
 }
 async function toggleRegister(val: boolean) {
   try {
-    await fetch(API + "/settings", {
+    await authFetch(API + "/settings", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key: "allow_register", value: val ? "true" : "false" })
     })

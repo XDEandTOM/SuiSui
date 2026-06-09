@@ -1,19 +1,14 @@
 ﻿import { ref, computed } from "vue"
 import { defineStore } from "pinia"
 
+import { authFetch } from "@/utils/api"
+
 const API = "/api"
 const AUTH_KEY = "suisui-auth"
 const USER_KEY = "suisui-user"
 const AVATAR_KEY = "suisui-avatar"
 const NICK_KEY = "suisui-nick"
 const TOKEN_KEY = "suisui-token"
-
-function addToken(url: string): string {
-  const token = localStorage.getItem(TOKEN_KEY) || ""
-  if (!token) return url
-  const sep = url.includes("?") ? "&" : "?"
-  return url + sep + "token=" + encodeURIComponent(token)
-}
 
 function clearStorage() {
   ;[AUTH_KEY, USER_KEY, AVATAR_KEY, NICK_KEY, TOKEN_KEY, "suisui-role", "suisui-color"].forEach(k => localStorage.removeItem(k))
@@ -71,7 +66,7 @@ const userRole = ref("user")
   async function updateAvatar(avatar: string) {
     if (!isLoggedIn.value) return
     try {
-      await fetch(addToken(`${API}/auth/avatar`), {
+      await authFetch(`${API}/auth/avatar`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: userName.value, avatar }),
       })
@@ -83,7 +78,7 @@ const userRole = ref("user")
   async function updateNickname(nickname: string) {
     if (!isLoggedIn.value) return
     try {
-      const res = await fetch(addToken(`${API}/auth/nickname`), {
+      const res = await authFetch(`${API}/auth/nickname`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: userName.value, nickname }),
       })
@@ -100,7 +95,7 @@ const userRole = ref("user")
   async function updateThemeColor(color: string) {
     if (!isLoggedIn.value) return
     try {
-      await fetch(addToken(`${API}/auth/theme`), {
+      await authFetch(`${API}/auth/theme`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: userName.value, theme: color }),
       })
@@ -111,7 +106,7 @@ const userRole = ref("user")
   async function updateAppIcon(appIcon: string) {
     if (!isLoggedIn.value) return
     try {
-      await fetch(addToken(`${API}/auth/app-icon`), {
+      await authFetch(`${API}/auth/app-icon`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: userName.value, appIcon }),
       })
