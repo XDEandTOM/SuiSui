@@ -40,7 +40,8 @@ renderer.code = ({ text, lang }) => {
 renderer.listitem = ({ text, task, checked }) => {
   if (task) {
     const idx = todoIndex++
-    return `<li><input type="checkbox" data-todo-idx="${idx}" ${checked ? 'checked' : ''}> ${text}</li>`
+    const checkedAttr = checked ? ' checked' : ''
+    return `<li class="todo-item"><label class="todo-label"><input type="checkbox" class="todo-checkbox" data-todo-idx="${idx}"${checkedAttr}><span class="todo-checkmark"></span><span class="todo-text${checked ? ' done' : ''}">${text}</span></label></li>`
   }
   return `<li>${text}</li>`
 }
@@ -199,6 +200,59 @@ function handleClick(e: MouseEvent) {
   color: inherit;
   border-radius: 3px;
   padding: 0 2px;
+}
+
+/* Todo list styling */
+.markdown-body :deep(.todo-item) {
+  list-style: none;
+  margin: 2px 0;
+}
+.markdown-body :deep(.todo-label) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  position: relative;
+}
+.markdown-body :deep(.todo-checkbox) {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.markdown-body :deep(.todo-checkmark) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(var(--v-theme-on-surface), 0.25);
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  position: relative;
+}
+.markdown-body :deep(.todo-checkbox:checked + .todo-checkmark) {
+  background: rgb(var(--v-theme-primary));
+  border-color: rgb(var(--v-theme-primary));
+}
+.markdown-body :deep(.todo-checkbox:checked + .todo-checkmark::after) {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.markdown-body :deep(.todo-checkbox:not(:checked) + .todo-checkmark:hover) {
+  border-color: rgba(var(--v-theme-primary), 0.5);
+}
+.markdown-body :deep(.todo-text.done) {
+  text-decoration: line-through;
+  opacity: 0.55;
 }
 </style>
 
