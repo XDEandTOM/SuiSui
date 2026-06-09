@@ -17,8 +17,9 @@ const searchQuery = ref("")
 const selectedTag = ref("")
 
 const siteIcp = ref("")
+const versionText = ref("")
 const icpLink = "https://beian.miit.gov.cn/#/Integrated/index"
-onMounted(async () => { await store.fetchNotes(); await loadSiteIcp() })
+onMounted(async () => { await store.fetchNotes(); await loadSiteIcp(); fetchVersion() })
 onBeforeUnmount(() => { zoomedUpload.value = "" })
 
 async function loadSiteIcp() {
@@ -29,6 +30,16 @@ async function loadSiteIcp() {
       siteIcp.value = s.site_icp || ""
     }
   } catch { /* ignore */ }
+}
+
+async function fetchVersion() {
+  try {
+    const r = await fetch("https://api.github.com/repos/Linraintong/SuiSui/releases/latest")
+    if (r.ok) {
+      const d = await r.json()
+      versionText.value = d.tag_name || ""
+    }
+  } catch { versionText.value = "" }
 }
 
 const allTags = computed(() => {
@@ -193,6 +204,7 @@ function handleEdit(memo: any) {
             </v-chip>
             <div v-if="!allTags.length" class="text-caption text-medium-emphasis py-2">暂无标签</div>
           </div>
+          <div v-if="versionText" class="text-caption text-medium-emphasis text-center mt-1" style="opacity:0.4;font-size:0.65rem">{{ versionText }}</div>
         </v-card>
       </div>
     </div>
@@ -217,6 +229,7 @@ function handleEdit(memo: any) {
               </v-chip>
               <div v-if="!allTags.length" class="text-caption text-medium-emphasis py-2">暂无标签</div>
             </div>
+            <div v-if="versionText" class="text-caption text-medium-emphasis text-center mt-1" style="opacity:0.4;font-size:0.65rem">{{ versionText }}</div>
           </v-card>
         </v-card>
       </v-dialog>
