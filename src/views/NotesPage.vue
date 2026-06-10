@@ -500,6 +500,9 @@ async function onDrop(e: DragEvent, targetNote: any) {
 
 <style scoped>
 .notes-layout { display: flex; gap: 28px; padding: 28px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
+.md-toolbar { overflow-x: auto !important; overflow-y: hidden; white-space: nowrap !important; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.md-toolbar::-webkit-scrollbar { height: 3px; }
+.md-toolbar::-webkit-scrollbar-thumb { background: rgba(var(--v-theme-on-surface), 0.15); border-radius: 3px; }
 .notes-layout.mobile { flex-direction: column; padding: 12px; gap: 12px; }
 .side-col { width: 280px; flex-shrink: 0; position: sticky; top: 24px; align-self: flex-start; }
 .notes-layout.mobile .side-col { display: none; }
@@ -514,7 +517,7 @@ async function onDrop(e: DragEvent, targetNote: any) {
 .inline-editor { width: 100%; }
 .editor-box {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
-  border-radius: 14px; overflow: hidden;
+  border-radius: 14px; overflow: clip;
   transition: border-color 0.2s, box-shadow 0.2s;
   background: rgb(var(--v-theme-surface));
 }
@@ -536,18 +539,6 @@ async function onDrop(e: DragEvent, targetNote: any) {
 .editor-toolbar .tool-btn { opacity: 0.5; border-radius: 6px; }
 .editor-toolbar .tool-btn:hover { opacity: 1; background: rgba(var(--v-theme-on-surface), 0.05); }
 .submit-btn { height: 30px; }
-.md-toolbar {
-  display: flex; align-items: center; gap: 2px;
-  padding: 6px 8px 4px;
-  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.06);
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  white-space: nowrap;
-}
-.md-toolbar::-webkit-scrollbar { height: 3px; }
-.md-toolbar::-webkit-scrollbar-thumb { background: rgba(var(--v-theme-on-surface), 0.15); border-radius: 3px; }
 .md-toolbar .tool-btn { width: 30px; height: 30px; opacity: 0.5; border-radius: 6px; flex-shrink: 0; }
 .md-toolbar .tool-btn:hover { opacity: 1; background: rgba(var(--v-theme-on-surface), 0.05); }
 .tool-sep { width: 1px; height: 20px; background: rgba(var(--v-theme-on-surface), 0.1); flex-shrink: 0; margin: 0 2px; }
