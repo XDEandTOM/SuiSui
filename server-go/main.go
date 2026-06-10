@@ -15,11 +15,6 @@ import (
 var staticFiles embed.FS
 
 func main() {
-	initDB()
-	initAdmin()
-	http.HandleFunc("/api/", handleAPI)
-	http.HandleFunc("/uploads/", handleUploads)
-	http.HandleFunc("/", handleStatic)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3001"
@@ -32,6 +27,11 @@ func main() {
 			dataDir = os.Args[i+1]
 		}
 	}
+	initDB()
+	initAdmin()
+	http.HandleFunc("/api/", handleAPI)
+	http.HandleFunc("/uploads/", handleUploads)
+	http.HandleFunc("/", handleStatic)
 	log.Println("Server on :" + port + " (data: " + dataDir + ")")
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
