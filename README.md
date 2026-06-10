@@ -115,7 +115,7 @@ docker run -d \
   --cpus="0.5" \
   --memory="256m" \
   -p 3001:3001 \
-  -v suisui-data:/data \
+  -v /opt/suisui:/data \
   linyumeng/suisui:latest
 ```
 
@@ -130,16 +130,13 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - suisui-data:/data
+      - /opt/suisui:/data
     deploy:
       resources:
         limits:
           cpus: "0.5"
           memory: "256M"
     restart: unless-stopped
-
-volumes:
-  suisui-data:
 ```
 
 然后启动：
