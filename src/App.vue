@@ -190,7 +190,7 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
   transition: transform 0.2s;
 }
 .sidebar-avatar:hover { transform: scale(1.1); }
-.sidebar-avatar-text { font-size: 0.85rem; font-weight: 600; color: #fff; }
+.sidebar-avatar-text { font-size: 0.85rem; font-weight: 600; color: rgb(var(--v-theme-on-surface)); }
 .sidebar-username {
   font-size: 0.6rem;
   color: rgba(var(--v-theme-on-surface), 0.55);
