@@ -443,7 +443,7 @@ async function onDrop(e: DragEvent, targetNote: any) {
           </div>
           <v-expand-transition>
             <div v-if="showInlineTags" class="pa-3">
-              <v-autocomplete v-model="inlineTagsInput" :items="allTags.map(t => t[0])" label="标签" variant="outlined" hide-details density="compact" placeholder="vue, memos, md" multiple chips closable-chips small-chips clearable @keydown.enter.prevent="() => {}" />
+              <v-combobox v-model="inlineTagsInput" :items="allTags.map(t => t[0])" label="标签" variant="outlined" hide-details density="compact" placeholder="vue, memos, md" multiple chips closable-chips small-chips clearable />
             </div>
           </v-expand-transition>
         </div>
