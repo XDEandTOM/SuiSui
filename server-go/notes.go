@@ -136,7 +136,9 @@ func handleNotes(w http.ResponseWriter, r *http.Request, path string) {
 			return
 		}
 		name := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
-		dst, err := os.Create(filepath.Join(uploadsDir(), name))
+		dir := uploadsDir()
+		os.MkdirAll(dir, 0755)
+		dst, err := os.Create(filepath.Join(dir, name))
 		if err != nil {
 			errResp(w, "文件写入失败", 500)
 			return
