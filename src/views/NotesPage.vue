@@ -342,8 +342,8 @@ async function onDrop(e: DragEvent, targetNote: Note) {
           </div>
         </v-card>
         <div v-if="versionText" class="d-flex justify-center mt-2">
-          <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="openGithub" style="cursor:pointer">
-            <v-icon start size="x-small">mdi-github</v-icon>{{ versionText }}
+          <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="openGithub" style="cursor:pointer" prepend-icon="mdi-github">
+            {{ versionText }}
           </v-chip>
         </div>
       </div>
@@ -371,8 +371,8 @@ async function onDrop(e: DragEvent, targetNote: Note) {
             </div>
           </v-card>
           <div v-if="versionText" class="d-flex justify-center mt-2">
-            <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="openGithub" style="cursor:pointer">
-              <v-icon start size="x-small">mdi-github</v-icon>{{ versionText }}
+            <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" @click="openGithub" style="cursor:pointer" prepend-icon="mdi-github">
+              {{ versionText }}
             </v-chip>
           </div>
         </v-card>
