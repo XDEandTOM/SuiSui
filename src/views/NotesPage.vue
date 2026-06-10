@@ -135,7 +135,13 @@ function insertHeading() { insertMd("\n## ","","标题") }
 function insertCode() { insertMd("`","`","code") }
 function insertLink() { insertMd("[","](url)","链接文字") }
 function insertList() { insertMd("\n- ","","列表项") }
+function insertOrderedList() { insertMd("\n1. ","","列表项") }
 function insertQuote() { insertMd("\n> ","","引用") }
+function insertStrikethrough() { insertMd("~~","~~","删除线") }
+function insertHr() { insertMd("\n---\n","","") }
+function insertTable() { insertMd("\n| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |","","") }
+function insertImage() { insertMd("![图片描述](",")","图片链接") }
+function insertCodeBlock() { insertMd("\n```\n","\n```\n","代码块") }
 
 async function fetchDeletedNotes() {
   try {
@@ -402,7 +408,15 @@ async function onDrop(e: DragEvent, targetNote: any) {
             <v-btn icon="mdi-link-variant" size="small" variant="text" class="tool-btn" @click="insertLink" title="链接" />
             <span class="tool-sep" />
             <v-btn icon="mdi-format-list-bulleted" size="small" variant="text" class="tool-btn" @click="insertList" title="列表" />
+            <v-btn icon="mdi-format-list-numbered" size="small" variant="text" class="tool-btn" @click="insertOrderedList" title="有序列表" />
+            <span class="tool-sep" />
             <v-btn icon="mdi-format-quote-open" size="small" variant="text" class="tool-btn" @click="insertQuote" title="引用" />
+            <v-btn icon="mdi-format-strikethrough-variant" size="small" variant="text" class="tool-btn" @click="insertStrikethrough" title="删除线" />
+            <v-btn icon="mdi-image-outline" size="small" variant="text" class="tool-btn" @click="insertImage" title="图片" />
+            <span class="tool-sep" />
+            <v-btn icon="mdi-code-braces" size="small" variant="text" class="tool-btn" @click="insertCodeBlock" title="代码块" />
+            <v-btn icon="mdi-table" size="small" variant="text" class="tool-btn" @click="insertTable" title="表格" />
+            <v-btn icon="mdi-minus" size="small" variant="text" class="tool-btn" @click="insertHr" title="分隔线" />
           </div>
           <textarea ref="inlineTextarea" v-model="inlineContent" class="inline-textarea"
             placeholder="写点什么呢.." rows="1" @keydown="onInlineKeydown" @paste="onInlinePaste" @input="autoGrowTextarea"></textarea>
