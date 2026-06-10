@@ -188,13 +188,14 @@ function timeAgo(ts: number) {
 .card-inner { padding: 14px; }
 .avatar-wrap {
   width: 38px; height: 38px; flex-shrink: 0; overflow: hidden;
-  border-radius: 10px; background: rgb(var(--v-theme-primary));
+  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(var(--v-theme-primary), 0.15);
 }
 .avatar-img { border-radius: 10px; }
 .avatar-fallback {
   width: 100%; height: 100%; display: flex; align-items: center;
   justify-content: center; color: #fff; font-size: 0.85rem; font-weight: 600;
+  background: rgb(var(--v-theme-primary));
 }
 .nickname { font-size: 1.1rem; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
 .time { font-size: 0.68rem; color: rgba(var(--v-theme-on-surface), 0.45); line-height: 1; margin-top: 2px; }
