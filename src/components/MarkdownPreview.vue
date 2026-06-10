@@ -203,6 +203,10 @@ function handleClick(e: MouseEvent) {
 }
 
 /* Todo list styling */
+.markdown-body :deep(ul:has(.todo-item)) {
+  padding-left: 0;
+  list-style: none;
+}
 .markdown-body :deep(.todo-item) {
   list-style: none;
   margin: 2px 0;
