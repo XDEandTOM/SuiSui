@@ -39,7 +39,7 @@ async function loadSharedNote() {
       const n = await res.json()
       note.value = n
       // Set page title to first chars of note content
-      const preview = (n.content || "").replace(/!\[.*?\]\(.+?\)/g, "[图片]").replace(/[#*`>\-\[\]()]/g, "").trim().substring(0, 30)
+      const preview = (n.content || "").replace(/!\[.*?\]\(.+?\)/g, "[图片]").replace(/[#*`>\-()]/g, "").trim().substring(0, 30)
       document.title = preview ? `📝 ${preview}${n.content?.length > 30 ? "…" : ""} - 碎碎 SuiSui` : "碎碎 SuiSui"
     } else {
       const data = await res.json()
