@@ -26,6 +26,14 @@ const DRAFT_KEY = "suisui-draft"
 const inlineContent = ref("")
 const inlineTagsInput = ref<string[]>([])
 const showInlineTags = ref(false)
+const tagInput = ref("")
+function addTag() {
+  const t = tagInput.value.trim()
+  if (t && !inlineTagsInput.value.includes(t)) {
+    inlineTagsInput.value.push(t)
+  }
+  tagInput.value = ""
+}
 const inlineUploading = ref(false)
 const inlineTextarea = ref<HTMLTextAreaElement | null>(null)
 const inlineFileInput = ref<HTMLInputElement | null>(null)
@@ -424,8 +432,15 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
             </v-btn>
           </div>
           <v-expand-transition>
-            <div v-if="showInlineTags" class="pa-3">
-              <v-combobox v-model="inlineTagsInput" :items="allTags.map(t => t[0])" label="标签" variant="outlined" hide-details density="compact" placeholder="vue, memos, md" multiple chips closable-chips small-chips clearable />
+            <div v-if="showInlineTags" class="inline-tag-bar">
+              <template v-for="(tag, i) in inlineTagsInput" :key="i">
+                <v-chip size="x-small" closable @click:close="inlineTagsInput.splice(i, 1)">
+                  {{ tag }}
+                </v-chip>
+              </template>
+              <v-text-field v-model="tagInput" variant="plain" hide-details density="compact"
+                placeholder="+ 添加标签" single-line class="tag-input"
+                @keydown.enter.prevent="addTag" />
             </div>
           </v-expand-transition>
         </div>
@@ -515,6 +530,16 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 .editor-toolbar .tool-btn { opacity: 0.5; border-radius: 6px; }
 .editor-toolbar .tool-btn:hover { opacity: 1; background: rgba(var(--v-theme-on-surface), 0.05); }
 .submit-btn { height: 30px; }
+.inline-tag-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  padding: 0 12px 8px;
+}
+.inline-tag-bar .tag-input {
+  min-width: 100px; max-width: 160px;
+}
+.inline-tag-bar .tag-input :deep(input) {
+  font-size: 0.8rem !important; padding: 0 !important;
+}
 .md-toolbar .tool-btn { width: 34px; height: 34px; opacity: 0.5; border-radius: 6px; flex-shrink: 0; }
 .md-toolbar .tool-btn:hover { opacity: 1; background: rgba(var(--v-theme-on-surface), 0.05); }
 .search-border :deep(.v-field) { border-color: #424242 !important; }

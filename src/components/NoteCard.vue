@@ -110,10 +110,10 @@ function timeAgo(ts: number) {
           </div>
           <div class="time">{{ timeAgo(memo.createdAt) }}</div>
         </div>
-        <div v-if="loggedIn && (auth.isAdmin || memo.username === auth.userName)" class="d-flex ga-1 flex-shrink-0" style="margin-top:2px">
+        <div v-if="loggedIn && (auth.isAdmin || memo.username === auth.userName)" class="d-flex ga-0 flex-shrink-0" style="margin-top:2px">
           <template v-if="memo.pinned">
-            <v-btn icon="mdi-chevron-up" size="x-small" variant="text" class="action-btn" @click="emit('movePin', memo, 'up')" />
-            <v-btn icon="mdi-chevron-down" size="x-small" variant="text" class="action-btn" @click="emit('movePin', memo, 'down')" />
+            <v-btn icon="mdi-chevron-up" size="x-small" variant="text" class="pin-move-btn" @click="emit('movePin', memo, 'up')" />
+            <v-btn icon="mdi-chevron-down" size="x-small" variant="text" class="pin-move-btn" @click="emit('movePin', memo, 'down')" />
           </template>
           <v-btn icon="mdi-pencil" size="x-small" variant="text" class="action-btn" @click="emit('edit', memo)" />
           <v-btn icon="mdi-pin-outline" size="x-small" variant="text"
@@ -207,11 +207,17 @@ function timeAgo(ts: number) {
   transition: opacity 0.2s, transform 0.15s;
   transform: scale(0.9);
 }
-.memo-card:hover .action-btn {
+.pin-move-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.memo-card:hover .action-btn,
+.memo-card:hover .pin-move-btn {
   opacity: 0.6;
   transform: scale(1);
 }
-.action-btn:hover { opacity: 1 !important; }
+.action-btn:hover,
+.pin-move-btn:hover { opacity: 1 !important; }
 .tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
 .tag-chip-card { font-size: 0.7rem; height: 22px !important; }
 .reactions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px; }
@@ -268,6 +274,7 @@ function timeAgo(ts: number) {
   .nickname { font-size: 1rem !important; }
   .avatar-wrap { width: 32px; height: 32px; }
   .memo-card { border-radius: 10px !important; }
+  .pin-move-btn, .action-btn { width: 24px !important; min-width: 24px !important; height: 24px !important; }
 }
 </style>
 
