@@ -36,7 +36,11 @@ async function loadSharedNote() {
   try {
     const res = await fetch(`/api/share/${token}`)
     if (res.ok) {
-      note.value = await res.json()
+      const n = await res.json()
+      note.value = n
+      // Set page title to first chars of note content
+      const preview = (n.content || "").replace(/!\[.*?\]\(.+?\)/g, "[图片]").replace(/[#*`>\-\[\]()]/g, "").trim().substring(0, 30)
+      document.title = preview ? `📝 ${preview}${n.content?.length > 30 ? "…" : ""} - 碎碎 SuiSui` : "碎碎 SuiSui"
     } else {
       const data = await res.json()
       error.value = data.error || "笔记不存在或分享链接已失效"
@@ -181,6 +185,7 @@ function toggleReaction(emoji: string) {
 
 <style scoped>
 .share-page {
+  min-height: 100vh;
   background: rgb(var(--v-theme-background));
 }
 .share-header {
@@ -260,4 +265,13 @@ function toggleReaction(emoji: string) {
 .cat-btn:hover { opacity:1; }
 .cat-btn.active { opacity:1; background: rgba(var(--v-theme-primary),0.1); }
 .emoji-grid { display: grid; grid-template-columns: repeat(7, 32px); gap: 4px; max-height: 280px; overflow-y: auto; }
+
+@media (max-width: 640px) {
+  .share-header { padding: 12px 16px; }
+  .share-main { padding: 20px 12px; }
+  .share-note-card { padding: 12px 14px 8px; border-radius: 10px; }
+  .share-content { font-size: 0.85rem; line-height: 1.5; }
+  .share-author-name { font-size: 0.8rem; }
+  .share-footer { padding: 12px; }
+}
 </style>
