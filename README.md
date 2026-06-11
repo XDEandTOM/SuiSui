@@ -204,10 +204,10 @@ suisui/
 
 | 前端 | 后端 |
 |------|------|
-| Vue 3 + TypeScript | Go |
+| Vue 3 + TypeScript (strict) | Go |
 | Vuetify 4 | SQLite (modernc.org/sqlite) |
 | Pinia 状态管理 | RESTful API (net/http) |
-| Marked + Highlight.js | 自实现 SHA-256 密码哈希 |
+| Marked + Highlight.js | HMAC-SHA256 × 10000 迭代密码哈希 |
 | Vite 6 | Token 鉴权 + IP 限流 |
 | emojibase-data | 版本化 DB 迁移 |
 
@@ -293,13 +293,47 @@ suisui/
 - [x] 自定义主题色
 - [x] 暗色模式
 - [x] 版本化 DB 迁移
-- [x] 21 项安全/正确性/性能修复
+- [x] TypeScript strict 模式全开 · 零 any 类型
+- [x] 密码哈希 HMAC-SHA256 迭代拉伸 · 旧密码自动升级
+- [x] Content-Security-Policy 安全头 · Graceful Shutdown · 请求日志
+- [x] 零外部 CDN 依赖 · 全部资源本地打包
 
 ---
 
 ## 📦 更新日志
 
-### v1.3.6 (2026-06-10)
+### v1.4.4 (2026-06-11)
+
+- 📝 **重新定位为碎片化笔记** — 全部界面"备忘录"→"碎片笔记"，README 同步更新
+- 🧩 项目定位：碎片化笔记 SPA — 捕捉每一丝灵感碎片
+
+### v1.4.3 (2026-06-11)
+
+- 📦 **去除 CDN 依赖，全部资源本地化** — MDI 字体、highlight.js 主题均从 npm 本地打包
+- 🔒 CSP 去掉 CDN 白名单，`style-src` 和 `font-src` 回退到 `'self'`
+
+### v1.4.2 (2026-06-11)
+
+- 🐛 修复版本号 GitHub 图标不显示 — `v-icon start` 改为 `v-chip prepend-icon`
+
+### v1.4.1 (2026-06-11)
+
+- 🐛 **修复透明头像蓝色背景** — 蓝底从 `.avatar-wrap` 移到 `.avatar-fallback`
+- 🏷️ 版本号前加 `mdi-github` 图标，点击跳转仓库
+
+### v1.4.0 (2026-06-11)
+
+- 🔐 **密码哈希升级** — SHA256 → HMAC-SHA256 × 10000 次迭代，旧用户首次登录自动升级
+- 🛡️ **安全增强** — Content-Security-Policy 头、graceful shutdown、请求超时、请求日志中间件
+- 🧹 **消灭全部 `map[string]interface{}`** — 12 个类型化响应结构体，零 map 返回
+- 🔥 **TypeScript strict: false → true** — 修复 8 个类型错误，零 any 类型
+- ⚡ **性能优化** — admin N+1 → LEFT JOIN 单次查询；execSQL 返回 error 而非静默吞
+- 🚦 **Go 生产化** — graceful shutdown (SIGINT/SIGTERM) + 读写/空闲超时 + `/health` 端点
+- 🧹 **零死代码** — 删除 4 个未使用组件 + `addToken()` 无用函数
+- 🔔 **16 处空 `catch {}` 加 `console.warn`** — 不再无声吞错误
+- 📐 **工程完善** — `package.json` 新增 `typecheck`/`clean` 脚本；`tsconfig` 加 `forceConsistentCasingInFileNames`
+- 🐛 修复 5 处未检查的 DB 错误 + `errResp` 类型化 + `authFetch` headers 类型缺陷
+- 🧹 清理残留文件：`database.db*`、根目录 `uploads/`、`server-go/*.exe`
 
 - 🐛 **修复 docker 数据库持久化 bug** — `-data /data` 参数在 `initDB()` 之后才解析，导致数据写入 `/app/` 而非 `/data/`，重启容器后数据丢失
 - 🎨 编辑器工具栏按钮加大（30→34px），移动端底部工具栏缩小
