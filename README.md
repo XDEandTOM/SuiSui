@@ -42,7 +42,6 @@
 ## 📸 预览
 
 > **在线体验：** [https://suisui.malaoer.top](https://suisui.malaoer.top)  
-> **默认管理员：** `admin / admin`
 
 ---
 
