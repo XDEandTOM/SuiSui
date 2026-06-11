@@ -27,7 +27,6 @@ const DRAFT_KEY = "suisui-draft"
 
 const inlineContent = ref("")
 const inlineTagsInput = ref<string[]>([])
-const showInlineTags = ref(false)
 const tagInput = ref("")
 function addTag() {
   const t = tagInput.value.trim()
@@ -62,7 +61,7 @@ function restoreDraft() {
     if (!raw) return
     const draft: { content?: string; tags?: string | string[]; images?: string[]; editingId?: string } = JSON.parse(raw)
     if (draft.content) inlineContent.value = draft.content
-    if (draft.tags) { inlineTagsInput.value = typeof draft.tags === "string" ? draft.tags.split(/[,，]/).map(t => t.trim()).filter(Boolean) : draft.tags; showInlineTags.value = true }
+    if (draft.tags) { inlineTagsInput.value = typeof draft.tags === "string" ? draft.tags.split(/[,，]/).map(t => t.trim()).filter(Boolean) : draft.tags }
     if (draft.images?.length) uploadedImages.value = draft.images
     if (draft.editingId) editingNoteId.value = draft.editingId
   } catch { console.warn("restoreDraft failed") }
@@ -202,7 +201,6 @@ async function submitInline() {
   inlineContent.value = ""
   inlineTagsInput.value = []
   uploadedImages.value = []
-  showInlineTags.value = false
   clearDraft()
   nextTick(() => {
     if (inlineTextarea.value) { inlineTextarea.value.style.height = '' }
@@ -290,7 +288,6 @@ function handleEdit(memo: Note) {
   uploadedImages.value = urls
   inlineTagsInput.value = memo.tags || []
   editingNoteId.value = memo.id
-  showInlineTags.value = true
   nextTick(() => {
     if (inlineTextarea.value) { inlineTextarea.value.style.height = "auto"; inlineTextarea.value.style.height = inlineTextarea.value.scrollHeight + "px" }
   })
@@ -431,7 +428,6 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
               <v-btn icon="mdi-image-plus" size="small" variant="text" class="tool-btn" :loading="inlineUploading" @click="triggerInlineUpload" />
               <input ref="inlineFileInput" type="file" accept="image/*" multiple hidden @change="onInlineUpload" />
               <span class="tool-sep-sm" />
-              <v-btn :icon="showInlineTags ? 'mdi-tag-off' : 'mdi-tag-outline'" size="small" variant="text" class="tool-btn" @click="showInlineTags = !showInlineTags" />
               <v-btn icon="mdi-delete-outline" size="small" variant="text" class="tool-btn"
                 @click="showTrash = !showTrash; if(showTrash) fetchDeletedNotes()" />
             </div>
@@ -439,8 +435,7 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
               <v-icon start>mdi-send</v-icon>{{ editingNoteId ? "更新" : "发布" }}
             </v-btn>
           </div>
-          <v-expand-transition>
-            <div v-if="showInlineTags" class="inline-tag-bar">
+          <div class="inline-tag-bar">
               <template v-for="(tag, i) in inlineTagsInput" :key="i">
                 <v-chip size="x-small" closable @click:close="inlineTagsInput.splice(i, 1)">
                   {{ tag }}
@@ -450,8 +445,7 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
                 placeholder="+ 添加标签" single-line class="tag-input"
                 @keydown.enter.prevent="addTag" />
             </div>
-          </v-expand-transition>
-        </div>
+          </div>
         <div v-if="hasDraft && !editingNoteId" class="draft-indicator">
           <v-icon size="x-small" color="warning">mdi-content-save</v-icon>
           <span>草稿已自动保存</span>
