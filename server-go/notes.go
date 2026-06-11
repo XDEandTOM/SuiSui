@@ -201,19 +201,24 @@ func handleNotes(w http.ResponseWriter, r *http.Request, path string) {
 
 	case strings.HasSuffix(path, "/react") && (r.Method == "POST" || r.Method == "DELETE"):
 		noteId := strings.TrimSuffix(strings.TrimPrefix(path, "/notes/"), "/react")
-		uid, tokenValid := verifyToken(r)
-		if !tokenValid || uid == "" {
-			errResp(w, "unauthorized", 401)
-			return
-		}
 		var body struct{ Emoji, Username string }
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			errResp(w, "无效的请求数据", 400)
 			return
 		}
-		if body.Emoji == "" || body.Username == "" || body.Username != uid {
+		if body.Emoji == "" || body.Username == "" {
 			errResp(w, "invalid request", 400)
 			return
+		}
+		// Allow guest reactions (guest_ prefix) without token, or verify token for logged-in users
+		if strings.HasPrefix(body.Username, "guest_") {
+			// Guest reaction — no auth required
+		} else {
+			uid, tokenValid := verifyToken(r)
+			if !tokenValid || uid == "" || body.Username != uid {
+				errResp(w, "unauthorized", 401)
+				return
+			}
 		}
 		if r.Method == "POST" {
 			if err := execSQL("INSERT OR IGNORE INTO reactions (id, emoji, username) VALUES (?, ?, ?)", noteId, body.Emoji, body.Username); err != nil {
