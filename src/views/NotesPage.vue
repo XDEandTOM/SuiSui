@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth"
 import { authFetch } from "@/utils/api"
 import NoteCard from "@/components/NoteCard.vue"
 import Heatmap from "@/components/Heatmap.vue"
+import SidePanel from "@/components/SidePanel.vue"
 
 defineProps<{ mobileHeatmap: boolean }>()
 const emit = defineEmits<{ "close-heatmap": [] }>()
@@ -70,6 +71,22 @@ const timelineGroups = computed(() => {
   }
   return groups
 })
+
+interface OutlineHeading { level: number; text: string; noteId: string }
+const outline = computed(() => {
+  const result: OutlineHeading[] = []
+  for (const note of store.notes) {
+    const matches = note.content.matchAll(/^(#{1,6})\s+(.+)$/gm)
+    for (const m of matches) {
+      result.push({ level: m[1].length, text: m[2].trim(), noteId: note.id })
+    }
+  }
+  return result
+})
+
+function scrollToNote(noteId: string) {
+  document.querySelector(`[data-note-id="${noteId}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+}
 
 // Scroll sentinel
 const scrollSentinel = ref<HTMLDivElement | null>(null)
@@ -373,31 +390,17 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 <template>
   <div class="notes-layout" :class="{ mobile: isMobile }">
     <div class="side-col">
-      <div class="side-content">
-        <v-text-field v-model="localSearch" prepend-inner-icon="mdi-magnify"
-          label="搜索备忘..." variant="outlined" hide-details density="compact"
-          clearable class="mb-3 rounded-search search-border" data-search-input />
-        <Heatmap class="mb-4" style="border-color:#424242 !important" @select-day="selectedDay = $event" />
-        <v-card variant="outlined" class="rounded-xl pa-4 side-card">
-          <div class="d-flex align-center ga-2 mb-3">
-            <span class="text-subtitle-2 font-weight-medium">标签</span>
-          </div>
-          <div class="d-flex flex-wrap ga-1">
-            <v-chip v-for="[tag] in store.allTags" :key="tag" size="x-small" class="tag-chip"
-              :color="tagColor(tag)"
-              :variant="selectedTag === tag ? 'flat' : 'outlined'"
-              @click="selectedTag = selectedTag === tag ? '' : tag">
-              #{{ tag }}
-            </v-chip>
-            <div v-if="!store.allTags.length" class="text-caption text-medium-emphasis py-2">暂无标签</div>
-          </div>
-        </v-card>
-        <div v-if="versionText" class="d-flex justify-center mt-2">
-          <v-chip size="x-small" variant="tonal" color="primary" class="version-chip" style="cursor:pointer" prepend-icon="mdi-github" @click="openGithub">
-            {{ versionText }}
-          </v-chip>
-        </div>
-      </div>
+      <SidePanel
+        :search="localSearch"
+        :selected-tag="selectedTag"
+        :selected-day="selectedDay"
+        :all-tags="store.allTags"
+        :version-text="versionText"
+        :outline="outline"
+        @update:search="localSearch = $event"
+        @update:selected-tag="selectedTag = $event"
+        @update:selected-day="selectedDay = $event"
+        @scroll-to-note="scrollToNote" />
     </div>
 
     <div class="main-col">
@@ -527,11 +530,16 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
           <v-btn icon="mdi-close" size="x-small" variant="text" @click="selectedDay = ''" />
         </div>
         <div class="view-bar">
-          <div class="view-bar-title">{{ viewMode === 'list' ? '列表' : '时间线' }}</div>
-          <v-btn-toggle v-model="viewMode" density="compact" color="primary" variant="tonal" mandatory class="view-toggle" rounded="8">
-            <v-btn icon="mdi-view-list" value="list" size="small" />
-            <v-btn icon="mdi-timeline" value="timeline" size="small" />
-          </v-btn-toggle>
+          <div class="view-bar-btns">
+            <button class="view-bar-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
+              <v-icon size="small">mdi-view-list</v-icon>
+              <span>列表</span>
+            </button>
+            <button class="view-bar-btn" :class="{ active: viewMode === 'timeline' }" @click="viewMode = 'timeline'">
+              <v-icon size="small">mdi-timeline</v-icon>
+              <span>时间线</span>
+            </button>
+          </div>
         </div>
         <div v-if="store.notes.length === 0" class="empty-state">
           <div class="empty-illust">
@@ -558,7 +566,7 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
         <Transition name="view-fade" mode="out-in">
           <div v-if="viewMode === 'list'" class="d-flex flex-column ga-4" key="list">
             <div v-for="(note, idx) in store.notes" :key="note.id" class="note-drag-wrapper"
-              :style="{ animationDelay: `${idx * 0.05}s` }">
+              :style="{ animationDelay: `${idx * 0.05}s` }" :data-note-id="note.id">
               <NoteCard :memo="note" :search-query="localSearch" :logged-in="auth.isLoggedIn" @edit="handleEdit" @move-pin="movePinnedNote" />
             </div>
           </div>
@@ -758,6 +766,22 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 .view-fade-enter-active, .view-fade-leave-active { transition: opacity 0.15s ease; }
 .view-fade-enter-from, .view-fade-leave-to { opacity: 0; }
 
+/* Outline */
+.outline-count {
+  font-size: 0.65rem; background: rgba(var(--v-theme-on-surface), 0.06);
+  padding: 0 6px; border-radius: 4px; color: rgba(var(--v-theme-on-surface), 0.4);
+}
+.outline-list { display: flex; flex-direction: column; gap: 1px; max-height: 240px; overflow-y: auto; }
+.outline-item {
+  display: flex; align-items: center; gap: 6px; padding: 4px 0;
+  border-radius: 4px; cursor: pointer; transition: all 0.1s;
+  font-size: 0.78rem; overflow: hidden;
+}
+.outline-item:hover { background: rgba(var(--v-theme-primary), 0.04); }
+.outline-marker { flex-shrink: 0; height: 2px; border-radius: 1px; background: rgba(var(--v-theme-primary), 0.25); }
+.outline-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.outline-more { font-size: 0.7rem; opacity: 0.35; padding: 2px 0; }
+
 .timeline-date-label {
   font-size: 0.78rem; font-weight: 600; padding: 4px 0 8px;
   color: rgba(var(--v-theme-on-surface), 0.5);
@@ -781,11 +805,23 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 .view-toggle { border-radius: 8px; overflow: hidden; }
 .view-toggle :deep(.v-btn) { border-radius: 0 !important; }
 .view-bar {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 4px; padding: 4px 0;
+  display: flex; align-items: center; margin-bottom: 8px;
 }
-.view-bar-title {
-  font-size: 0.72rem; font-weight: 500; opacity: 0.35;
-  transition: opacity 0.2s;
+.view-bar-btns {
+  display: flex; border-radius: 8px; overflow: hidden;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+.view-bar-btn {
+  display: flex; align-items: center; gap: 4px; padding: 5px 14px;
+  border: none; background: transparent; cursor: pointer;
+  font-size: 0.78rem; color: rgba(var(--v-theme-on-surface), 0.5);
+  transition: all 0.15s; font-family: inherit;
+}
+.view-bar-btn:not(:last-child) { border-right: 1px solid rgba(var(--v-theme-on-surface), 0.06); }
+.view-bar-btn:hover { color: rgba(var(--v-theme-on-surface), 0.8); }
+.view-bar-btn.active {
+  background: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
 }
 
 /* Skeleton loading */

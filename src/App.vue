@@ -2,8 +2,8 @@
 import { ref, onMounted, watch, computed, defineAsyncComponent } from "vue"
 import { useDisplay, useTheme } from "vuetify"
 import { useAuthStore } from "@/stores/auth"
-import NotesPage from "@/views/NotesPage.vue"
 
+const NotesPage = defineAsyncComponent(() => import("@/views/NotesPage.vue"))
 const AdminPage = defineAsyncComponent(() => import("@/views/AdminPage.vue"))
 import LoginDialog from "@/components/LoginDialog.vue"
 import AppLogo from "@/components/AppLogo.vue"
@@ -207,6 +207,7 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
 .v-main { transition: margin-left 0.3s ease, padding-bottom 0.3s ease; }
 /* Dialog glass background */
 .v-dialog > .v-card:not(.v-card--flat) { background: rgba(var(--v-theme-surface), 0.88) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+
 </style>
 
 <style scoped>
@@ -273,15 +274,6 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
   position: relative; border-radius: 10px;
 }
 .sidebar-btn:hover { opacity: 1; transform: scale(1.1); background: rgba(var(--v-theme-primary), 0.06); }
-.sidebar-btn::after {
-  content: attr(title); position: absolute; left: 48px; top: 50%;
-  transform: translateY(-50%); padding: 4px 8px; border-radius: 6px;
-  background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface));
-  font-size: 0.72rem; font-weight: 500; white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1); pointer-events: none;
-  opacity: 0; transition: opacity 0.15s; z-index: 999;
-}
-.sidebar-btn:hover::after { opacity: 1; }
 
 .mobile-bottom-bar {
   position: fixed;

@@ -1,22 +1,11 @@
 <script setup lang="ts">
-import { ref } from "vue"
-
 const visible = defineModel<boolean>("modelValue", { required: true })
-const copied = ref(false)
-
 const bookmarkletCode = `javascript:(function(){
   const t=document.title, u=location.href, s=getSelection()?.toString()||'';
   let body = t + '\\n' + u;
   if(s) body += '\\n\\n> ' + s.replace(/\\n/g,'\\n> ');
   window.open('${location.origin}/?clip=' + encodeURIComponent(body), '_blank');
 })()`
-
-function copyCode() {
-  navigator.clipboard.writeText(bookmarkletCode).then(() => {
-    copied.value = true
-    setTimeout(() => copied.value = false, 2000)
-  })
-}
 </script>
 
 <template>
@@ -30,9 +19,9 @@ function copyCode() {
       <div class="mb-3 text-caption text-medium-emphasis" style="line-height:1.6">
         把下面的链接拖到浏览器书签栏，在任何网页上点击它，页面标题+链接+选中文字会自动保存到碎片笔记。
       </div>
-      <div class="bookmarklet-box" @click="copyCode">
-        <span class="bookmarklet-text">{{ copied ? '已复制 ✓' : '📥 拖到书签栏' }}</span>
-      </div>
+      <a :href="bookmarkletCode" class="bookmarklet-box">
+        <span class="bookmarklet-text">📥 拖到书签栏</span>
+      </a>
       <div class="text-caption text-medium-emphasis mt-2" style="line-height:1.5">
         提示：书签栏没显示的话，按 <kbd class="hint-kbd">Ctrl+Shift+B</kbd> 打开书签栏，然后把上面这个链接拖进去。
       </div>

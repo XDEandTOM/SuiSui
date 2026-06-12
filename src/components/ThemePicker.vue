@@ -12,6 +12,10 @@ const presets: Record<string, Preset> = {
   forest:  { name: "森林", emoji: "🌲", light: { primary: "#2E7D32" }, dark: { primary: "#66BB6A" } },
   ocean:   { name: "海洋", emoji: "🌊", light: { primary: "#00695C" }, dark: { primary: "#4DB6AC" } },
   lavender:{ name: "薰衣草", emoji: "🌸", light: { primary: "#7B1FA2" }, dark: { primary: "#CE93D8" } },
+  starry:  { name: "星空", emoji: "🌌", light: { primary: "#4A148C" }, dark: { primary: "#B39DDB" } },
+  aurora:  { name: "极光", emoji: "💚", light: { primary: "#1B5E20" }, dark: { primary: "#81C784" } },
+  sakura:  { name: "樱花", emoji: "🌸", light: { primary: "#AD1457" }, dark: { primary: "#F48FB1" } },
+  graphite:{ name: "石墨", emoji: "🪨", light: { primary: "#37474F" }, dark: { primary: "#78909C" } },
 }
 
 const visible = defineModel<boolean>("modelValue", { required: true })
@@ -22,6 +26,8 @@ const fonts = [
   { id: "sans",   name: "默认无衬线",   css: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" },
   { id: "serif",  name: "衬线体",      css: "'Georgia', 'Noto Serif SC', 'Source Han Serif SC', serif" },
   { id: "mono",   name: "等宽体",      css: "'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace" },
+  { id: "round",  name: "圆体",        css: "'Rounded Mplus 1c', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif" },
+  { id: "kai",    name: "楷体",        css: "'STKaiti', 'KaiTi', 'Noto Serif SC', serif" },
 ]
 
 function applyFont(id: string) {
@@ -51,7 +57,7 @@ if (font) {
 </script>
 
 <template>
-  <v-dialog :model-value="visible" @update:model-value="v => visible = v" max-width="340">
+  <v-dialog :model-value="visible" @update:model-value="v => visible = v" max-width="370">
     <v-card class="rounded-xl pa-4">
       <div class="d-flex align-center mb-3">
         <span class="text-subtitle-2 font-weight-medium">主题与字体</span>

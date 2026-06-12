@@ -12,7 +12,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           vuetify: ["vuetify"],
-          "highlight.js": ["highlight.js"],
           marked: ["marked"],
         },
       },
