@@ -1,11 +1,24 @@
 <script setup lang="ts">
+import { ref, computed, onMounted } from "vue"
 const visible = defineModel<boolean>("modelValue", { required: true })
-const bookmarkletCode = `javascript:(function(){
+const origin = ref(location.origin)
+
+onMounted(async () => {
+  try {
+    const r = await fetch("/api/settings")
+    if (r.ok) {
+      const s = await r.json()
+      if (s.site_domain) origin.value = s.site_domain.replace(/\/+$/, "")
+    }
+  } catch { console.warn("fetch domain failed") }
+})
+
+const bookmarkletCode = computed(() => `javascript:(function(){
   const t=document.title, u=location.href, s=getSelection()?.toString()||'';
   let body = t + '\\n' + u;
   if(s) body += '\\n\\n> ' + s.replace(/\\n/g,'\\n> ');
-  window.open('${location.origin}/?clip=' + encodeURIComponent(body), '_blank');
-})()`
+  window.open('${origin.value}/?clip=' + encodeURIComponent(body), '_blank');
+})()`)
 </script>
 
 <template>

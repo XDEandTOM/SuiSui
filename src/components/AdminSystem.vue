@@ -18,6 +18,9 @@ const showAppIconPicker = ref(false)
 const showFaviconPicker = ref(false)
 
 const serverConfig = ref({ version: "", port: "", tls: false, dataDir: "" })
+const siteDomain = ref("")
+const domainInput = ref("")
+const showDomainDialog = ref(false)
 const certText = ref("")
 const keyText = ref("")
 const savingSSL = ref(false)
@@ -63,6 +66,7 @@ async function loadSettings() {
       const s = await r.json()
       siteTitle.value = s.site_title || ""
       siteIcp.value = s.site_icp || ""
+      siteDomain.value = s.site_domain || ""
       document.title = s.site_title || "碎碎"
       allowRegister.value = s.allow_register !== "false"
     }
@@ -71,6 +75,7 @@ async function loadSettings() {
 
 function openTitleDialog() { titleInput.value = siteTitle.value; showTitleDialog.value = true }
 function openIcpDialog() { icpInput.value = siteIcp.value; showIcpDialog.value = true }
+function openDomainDialog() { domainInput.value = siteDomain.value; showDomainDialog.value = true }
 
 async function saveSiteTitle() {
   try {
@@ -90,6 +95,16 @@ async function saveSiteIcp() {
     })
     snackMsg.value = "备案号已保存"; snackbar.value = true; showIcpDialog.value = false
   } catch { console.warn("saveSiteIcp failed") }
+}
+async function saveDomain() {
+  try {
+    await authFetch(API + "/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "site_domain", value: domainInput.value.trim() })
+    })
+    siteDomain.value = domainInput.value.trim()
+    snackMsg.value = "域名已保存"; snackbar.value = true; showDomainDialog.value = false
+  } catch { console.warn("saveDomain failed") }
 }
 async function toggleRegister(val: boolean) {
   try {
@@ -137,6 +152,17 @@ loadServerConfig()
             <span class="text-body-2">备案号</span>
           </div>
           <v-btn size="small" variant="tonal" color="primary" @click="openIcpDialog">修改</v-btn>
+        </div>
+        <v-divider />
+        <div class="d-flex align-center justify-space-between">
+          <div class="d-flex align-center ga-3">
+            <v-icon color="primary">mdi-domain</v-icon>
+            <span class="text-body-2">域名</span>
+          </div>
+          <div class="d-flex align-center ga-2">
+            <span class="text-body-2 text-medium-emphasis text-caption">{{ siteDomain || "未设置" }}</span>
+            <v-btn size="small" variant="tonal" color="primary" @click="openDomainDialog">修改</v-btn>
+          </div>
         </div>
         <v-divider />
         <div class="d-flex align-center justify-space-between">
@@ -226,6 +252,20 @@ loadServerConfig()
           <v-spacer />
           <v-btn variant="text" @click="showIcpDialog = false">取消</v-btn>
           <v-btn variant="tonal" color="primary" @click="siteIcp = icpInput; saveSiteIcp()">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <!-- Domain Dialog -->
+    <v-dialog v-model="showDomainDialog" max-width="400">
+      <v-card class="rounded-xl pa-4">
+        <v-card-title class="text-subtitle-1 font-weight-medium px-0">配置域名</v-card-title>
+        <v-card-text class="px-0">
+          <v-text-field v-model="domainInput" variant="outlined" hide-details density="compact" placeholder="https://suisui.example.com" autofocus @keyup.enter="saveDomain" />
+        </v-card-text>
+        <v-card-actions class="px-0">
+          <v-spacer />
+          <v-btn variant="text" @click="showDomainDialog = false">取消</v-btn>
+          <v-btn variant="tonal" color="primary" @click="saveDomain">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
