@@ -255,8 +255,6 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 		handleShareView(w, r)
 	case strings.HasPrefix(path, "/settings"):
 		handleSettings(w, r)
-	case strings.HasPrefix(path, "/admin/"):
-		handleAdmin(w, r, path)
 	case path == "/admin/config":
 		jsonResp(w, map[string]interface{}{
 			"version": Version,
@@ -264,6 +262,8 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 			"tls":     serverCertFile != "" && serverKeyFile != "",
 			"dataDir": dataDir,
 		})
+	case strings.HasPrefix(path, "/admin/"):
+		handleAdmin(w, r, path)
 	default:
 		errResp(w, "not found", 404)
 	}

@@ -205,49 +205,30 @@ loadBrotliConfig()
     <FaviconPicker v-model="showFaviconPicker" />
 
     <v-card variant="outlined" class="rounded-xl pa-6 mb-4 stat-card">
-      <h3 class="text-subtitle-1 font-weight-medium mb-4">服务器配置</h3>
+      <h3 class="text-subtitle-1 font-weight-medium mb-4">服务器</h3>
       <div class="d-flex flex-column ga-3">
-        <div class="d-flex align-center justify-space-between">
-          <span class="text-body-2">版本</span>
-          <span class="text-body-2 text-medium-emphasis">{{ serverConfig.version || "—" }}</span>
-        </div>
-        <v-divider />
-        <div class="d-flex align-center justify-space-between">
-          <span class="text-body-2">端口</span>
-          <span class="text-body-2 text-medium-emphasis">{{ serverConfig.port || "—" }}</span>
-        </div>
-        <v-divider />
-        <div class="d-flex align-center justify-space-between">
-          <span class="text-body-2">TLS</span>
-          <v-chip size="x-small" :color="serverConfig.tls ? 'success' : 'default'" variant="tonal">
-            {{ serverConfig.tls ? '已开启' : '未开启' }}
+        <div class="d-flex align-center ga-3">
+          <v-chip size="x-small" variant="tonal" color="default" class="server-badge">v{{ serverConfig.version || "—" }}</v-chip>
+          <v-chip size="x-small" variant="tonal" :color="serverConfig.tls ? 'success' : 'default'" class="server-badge">
+            {{ serverConfig.tls ? 'TLS' : '直连 HTTP' }}
           </v-chip>
         </div>
-        <v-divider />
-        <div class="d-flex align-center justify-space-between">
-          <span class="text-body-2">Brotli 压缩</span>
+        <div class="d-flex align-center ga-2">
+          <span class="text-body-2" style="min-width:100px">Brotli 压缩</span>
           <v-switch v-model="brotliEnabled" hide-details density="compact" color="primary" @update:model-value="toggleBrotli" />
-        <v-divider />
-        <div class="d-flex align-center justify-space-between">
-          <span class="text-body-2">数据目录</span>
-          <span class="text-body-2 text-medium-emphasis text-caption">{{ serverConfig.dataDir || "—" }}</span>
         </div>
         <v-divider />
-        <div class="d-flex flex-column ga-2">
-          <span class="text-body-2">SSL 证书</span>
-          <v-textarea v-model="certText" variant="outlined" hide-details density="compact" rows="4"
-            placeholder="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----" class="ssl-textarea" />
-          <span class="text-body-2 mt-1">SSL 私钥</span>
-          <v-textarea v-model="keyText" variant="outlined" hide-details density="compact" rows="4"
-            placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----" class="ssl-textarea" />
-          <div class="d-flex align-center ga-2 mt-1">
-            <v-btn size="small" variant="flat" color="primary" :loading="savingSSL" @click="saveSSL">保存并重启</v-btn>
-            <v-btn v-if="serverConfig.tls" size="small" variant="tonal" color="error" @click="clearSSL">关闭 TLS</v-btn>
-          </div>
+        <span class="text-subtitle-2 font-weight-medium">SSL 证书</span>
+        <v-textarea v-model="certText" variant="outlined" hide-details density="compact" rows="3"
+          placeholder="-----BEGIN CERTIFICATE-----" class="ssl-textarea" />
+        <v-textarea v-model="keyText" variant="outlined" hide-details density="compact" rows="3"
+          placeholder="-----BEGIN PRIVATE KEY-----" class="ssl-textarea" />
+        <div class="d-flex align-center ga-2">
+          <v-btn size="small" variant="flat" color="primary" :loading="savingSSL" @click="saveSSL">保存并重启</v-btn>
+          <v-btn v-if="serverConfig.tls" size="small" variant="tonal" color="error" @click="clearSSL">关闭 TLS</v-btn>
         </div>
       </div>
-    </div>
-</v-card>
+    </v-card>
 
     <!-- Title Dialog -->
     <v-dialog v-model="showTitleDialog" max-width="400">
@@ -297,5 +278,6 @@ loadBrotliConfig()
 
 <style scoped>
 .stat-card { border-color: #424242 !important; background: rgba(var(--v-theme-surface), 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.server-badge { height: 24px !important; font-size: 0.7rem !important; }
 .ssl-textarea :deep(textarea) { font-size: 0.75rem !important; font-family: var(--code-font) !important; }
 </style>
