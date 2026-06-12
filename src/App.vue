@@ -9,6 +9,7 @@ import LoginDialog from "@/components/LoginDialog.vue"
 import AppLogo from "@/components/AppLogo.vue"
 import ShareView from "@/components/ShareView.vue"
 import ThemePicker from "@/components/ThemePicker.vue"
+import BookmarkletDialog from "@/components/BookmarkletDialog.vue"
 
 const isShareView = computed(() => window.location.pathname.startsWith("/share/"))
 
@@ -20,6 +21,7 @@ const showAdmin = ref(false)
 const showLogin = ref(false)
 const showProfile = ref(false)
 const showThemePicker = ref(false)
+const showBookmarklet = ref(false)
 const showMobileHeatmap = ref(false)
 const nickEdit = ref("")
 const savingNick = ref(false)
@@ -118,8 +120,9 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
 
       <div class="sidebar-middle" />
       <div class="sidebar-bottom">
-        <v-btn icon="mdi-palette-outline" variant="text" size="small" class="sidebar-btn" @click.stop="showThemePicker = true" />
-        <v-btn icon="mdi-theme-light-dark" variant="text" size="small" class="sidebar-btn" @click.stop="toggleTheme" />
+        <v-btn icon="mdi-palette-outline" variant="text" size="small" class="sidebar-btn" title="主题配色" @click.stop="showThemePicker = true" />
+        <v-btn icon="mdi-bookmark-plus-outline" variant="text" size="small" class="sidebar-btn" title="网页剪藏" @click.stop="showBookmarklet = true" />
+        <v-btn icon="mdi-theme-light-dark" variant="text" size="small" class="sidebar-btn" title="切换亮暗" @click.stop="toggleTheme" />
         <template v-if="auth.ready && auth.isLoggedIn">
           <v-btn icon="mdi-cog-outline" variant="text" size="small" class="sidebar-btn"
             :color="showAdmin ? 'primary' : undefined"
@@ -165,7 +168,8 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
     </v-main>
     <LoginDialog v-model="showLogin" />
     <ThemePicker v-model="showThemePicker" />
-    <v-dialog v-model="showProfile" max-width="420">
+    <BookmarkletDialog v-model="showBookmarklet" />
+    <v-dialog v-model="showProfile" max-width="420" transition="scale-transition">
       <v-card class="rounded-xl pa-4">
         <div class="d-flex align-center mb-3">
           <span class="text-subtitle-2 font-weight-medium">个人资料</span>
@@ -186,8 +190,10 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
 <style>
 /* Font variable for code blocks */
 :root { --code-font: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
+::selection { background: rgba(var(--v-theme-primary), 0.25); }
 .main-bg {
   min-height: 100vh;
+  transition: background 0.3s ease;
   background:
     radial-gradient(ellipse at 20% 50%, rgba(var(--v-theme-primary), 0.06) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(var(--v-theme-primary), 0.04) 0%, transparent 50%),
@@ -199,6 +205,8 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
 ::-webkit-scrollbar-thumb { background: rgba(var(--v-theme-on-surface), 0.15); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(var(--v-theme-on-surface), 0.25); }
 .v-main { transition: margin-left 0.3s ease, padding-bottom 0.3s ease; }
+/* Dialog glass background */
+.v-dialog > .v-card:not(.v-card--flat) { background: rgba(var(--v-theme-surface), 0.88) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
 </style>
 
 <style scoped>
@@ -217,13 +225,13 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 100;
-  gap: 4px;
+  gap: 2px;
 }
 .sidebar-top {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 4px 0 8px;
+  padding: 4px 0 10px;
   border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.06);
   width: 40px;
 }
@@ -261,9 +269,19 @@ watch([() => auth.isLoggedIn, () => auth.userRole], () => {
 }
 .sidebar-btn {
   opacity: 0.55;
-  transition: opacity 0.2s, transform 0.15s;
+  transition: opacity 0.2s, transform 0.15s, background 0.15s;
+  position: relative; border-radius: 10px;
 }
-.sidebar-btn:hover { opacity: 1; transform: scale(1.1); }
+.sidebar-btn:hover { opacity: 1; transform: scale(1.1); background: rgba(var(--v-theme-primary), 0.06); }
+.sidebar-btn::after {
+  content: attr(title); position: absolute; left: 48px; top: 50%;
+  transform: translateY(-50%); padding: 4px 8px; border-radius: 6px;
+  background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface));
+  font-size: 0.72rem; font-weight: 500; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); pointer-events: none;
+  opacity: 0; transition: opacity 0.15s; z-index: 999;
+}
+.sidebar-btn:hover::after { opacity: 1; }
 
 .mobile-bottom-bar {
   position: fixed;

@@ -34,9 +34,12 @@ renderer.code = ({ text, lang }) => {
   } catch { highlighted = text }
   const langAttr = lang ? ` class="language-${lang}"` : ""
   const encoded = encodeURIComponent(text)
+  const lines = text.split("\n").length
   return `<div class="code-block-wrapper">
+    <div class="code-header"><span class="code-dot red"></span><span class="code-dot yellow"></span><span class="code-dot green"></span>${lang ? `<span class="code-lang">${lang}</span>` : ""}</div>
+    <div class="code-body"><div class="code-gutter">${Array.from({length: lines}, (_, i) => `<span class="code-line-num">${i + 1}</span>`).join("")}</div>
+    <pre><code${langAttr}>${highlighted}</code></pre></div>
     <button class="copy-btn" data-code="${encoded}"><svg style="pointer-events:none" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
-    <pre><code${langAttr}>${highlighted}</code></pre>
   </div>`
 }
 renderer.listitem = ({ text, task, checked }) => {
@@ -165,12 +168,35 @@ function handleClick(e: MouseEvent) {
 .markdown-body :deep(pre code) { background: none; padding: 0; font-size: .85em; font-family: var(--code-font); }
 .markdown-body :deep(table) { border-collapse: collapse; width: 100%; margin: .5em 0; }
 .markdown-body :deep(th),.markdown-body :deep(td) { border: 1px solid rgba(var(--v-theme-on-surface),.15); padding: .4em .6em; text-align: left; }
-.markdown-body :deep(img) { max-width: 100%; max-height: 220px; border-radius: 6px; cursor: zoom-in; }
-.markdown-body :deep(a) { color: rgb(var(--v-theme-primary)); }
-.markdown-body :deep(.code-block-wrapper) { position: relative; margin: .5em 0; }
+.markdown-body :deep(img) { max-width: 100%; max-height: 220px; border-radius: 10px; cursor: zoom-in; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.2s, box-shadow 0.2s; }
+.markdown-body :deep(img:hover) { transform: scale(1.01); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+.markdown-body :deep(a) { color: rgb(var(--v-theme-primary)); text-decoration: none; transition: text-decoration 0.15s, opacity 0.15s; }
+.markdown-body :deep(a:hover) { text-decoration: underline; opacity: 0.85; }
+.markdown-body :deep(.code-block-wrapper) { position: relative; margin: .5em 0; border-radius: 10px; overflow: hidden; border: 1px solid rgba(var(--v-theme-on-surface), 0.06); }
+.markdown-body :deep(.code-header) {
+  display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+  background: rgba(var(--v-theme-on-surface), 0.03);
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.04);
+}
+.markdown-body :deep(.code-dot) { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.markdown-body :deep(.code-dot.red) { background: #ff5f57; }
+.markdown-body :deep(.code-dot.yellow) { background: #febc2e; }
+.markdown-body :deep(.code-dot.green) { background: #28c840; }
+.markdown-body :deep(.code-lang) { margin-left: auto; font-size: 0.7rem; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.5px; }
+.markdown-body :deep(.code-body) { display: flex; }
+.markdown-body :deep(.code-gutter) {
+  display: flex; flex-direction: column; align-items: flex-end; padding: 12px 8px;
+  background: rgba(var(--v-theme-on-surface), 0.02); user-select: none;
+  border-right: 1px solid rgba(var(--v-theme-on-surface), 0.04);
+}
+.markdown-body :deep(.code-line-num) {
+  font-size: 0.72em; line-height: 1.6; color: rgba(var(--v-theme-on-surface), 0.2);
+  font-family: var(--code-font);
+}
+.markdown-body :deep(.code-body pre) { background: none; border-radius: 0; margin: 0; padding: 12px 0; }
 .markdown-body :deep(pre) { margin: 0; }
 .markdown-body :deep(.copy-btn) {
-  position: absolute; top: 6px; right: 6px; width: 28px; height: 28px;
+  position: absolute; top: 4px; right: 4px; width: 28px; height: 28px;
   padding: 0; display: flex; align-items: center; justify-content: center;
   border: 1px solid rgba(var(--v-theme-on-surface), 0.15); border-radius: 4px;
   background: rgb(var(--v-theme-surface)); color: rgba(var(--v-theme-on-surface), 0.6);
@@ -242,6 +268,13 @@ function handleClick(e: MouseEvent) {
 .markdown-body :deep(.todo-checkbox:checked + .todo-checkmark) {
   background: rgb(var(--v-theme-primary));
   border-color: rgb(var(--v-theme-primary));
+  transform: scale(0.9);
+  animation: checkPop 0.25s ease;
+}
+@keyframes checkPop {
+  0% { transform: scale(0.9); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
 .markdown-body :deep(.todo-checkbox:checked + .todo-checkmark::after) {
   content: "";

@@ -117,10 +117,11 @@ function formatTooltip(day: number, count: number) {
 .today { outline: 2px solid rgba(var(--v-theme-primary), 0.5); font-weight: 700; }
 .empty-cell { visibility: hidden; }
 .level-0 { background: rgba(var(--v-theme-primary), 0.06); color: rgba(var(--v-theme-on-surface), 0.5); }
-.level-1 { background: rgba(var(--v-theme-primary), 0.25); }
-.level-2 { background: rgba(var(--v-theme-primary), 0.45); }
-.level-3 { background: rgba(var(--v-theme-primary), 0.7); color: #fff; }
-.level-4 { background: rgb(var(--v-theme-primary)); color: #fff; }
+.level-1, .level-2, .level-3, .level-4 { border-radius: 3px; }
+.level-1 { background: rgba(var(--v-theme-primary), 0.2); }
+.level-2 { background: rgba(var(--v-theme-primary), 0.4); }
+.level-3 { background: rgba(var(--v-theme-primary), 0.65); color: #fff; }
+.level-4 { background: rgb(var(--v-theme-primary)); color: #fff; border-radius: 3px; }
 
 @media (max-width: 768px) {
   .heatmap-card { padding: 8px !important; }

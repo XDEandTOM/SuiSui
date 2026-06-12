@@ -28,6 +28,8 @@ const users = ref<AdminUser[]>([])
 const loading = ref(false)
 const deleting = ref<null | number>(null)
 
+watch(tab, () => window.scrollTo(0, 0))
+
 onMounted(() => {
   if (auth.userRole !== "admin") tab.value = "profile"
   else { loadData() }
@@ -80,9 +82,11 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
       <v-tab value="profile"><v-icon start size="small">mdi-account</v-icon>个人资料</v-tab>
     </v-tabs>
 
-    <template v-if="tab === &quot;overview&quot; && auth.isAdmin">
-      <v-card variant="outlined" class="rounded-xl pa-6 mb-4 stat-card">
-        <h3 class="text-subtitle-1 font-weight-medium mb-4">网站概览</h3>
+    <Transition name="fade" mode="out-in">
+      <div :key="tab">
+        <template v-if="tab === &quot;overview&quot; && auth.isAdmin">
+          <v-card variant="outlined" class="rounded-xl pa-6 mb-4 stat-card">
+            <h3 class="text-subtitle-1 font-weight-medium mb-4">网站概览</h3>
         <div class="d-flex align-center justify-space-between py-3">
           <div class="d-flex align-center ga-3">
             <v-icon color="primary">mdi-account</v-icon>
@@ -143,16 +147,17 @@ function formatDate(ts: number) { return new Date(ts).toLocaleString("zh-CN") }
     <template v-if="tab === &quot;profile&quot;">
       <AdminProfile />
     </template>
+      </div>
+    </Transition>
 </v-container>
 </template>
 
 <style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 .stat-card { border-color: #424242 !important; }
 .user-row { border-bottom: 1px solid rgba(var(--v-theme-on-surface),0.06); }
 .user-row:last-child { border-bottom: none; }
-.theme-picker { width: 36px; height: 36px; border: none; border-radius: 50%; cursor: pointer; padding: 0; background: none; }
-.theme-picker::-webkit-color-swatch-wrapper { padding: 0; }
-.theme-picker::-webkit-color-swatch { border: 2px solid rgba(var(--v-theme-on-surface), 0.15); border-radius: 50%; }
 @media (max-width: 768px) {
   .admin-container { padding: 12px !important; }
   .admin-container :deep(.v-tabs) { flex-wrap: nowrap; overflow-x: auto; }

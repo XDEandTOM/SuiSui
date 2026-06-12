@@ -16,18 +16,8 @@ const pwdOld = ref("")
 const pwdNew = ref("")
 const pwdConfirm = ref("")
 const showAvatarPicker = ref(false)
-const themeColorInput = ref(auth.userThemeColor)
 const importing = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
-
-function onColorChange(e: Event) {
-  themeColorInput.value = (e.target as HTMLInputElement).value
-}
-
-async function saveThemeColor() {
-  await auth.updateThemeColor(themeColorInput.value)
-  snackMsg.value = "主题色已保存"; snackbar.value = true
-}
 
 function openNickDialog() { nickInput.value = auth.userNickname; nickError.value = ""; showNickDialog.value = true }
 function openPwdDialog() { pwdOld.value = ""; pwdNew.value = ""; pwdConfirm.value = ""; showPwdDialog.value = true }
@@ -123,17 +113,6 @@ async function importNotes(e: Event) {
           </div>
           <v-btn size="small" variant="tonal" color="primary" @click="openPwdDialog">修改</v-btn>
         </div>
-        <v-divider />
-        <div class="d-flex align-center justify-space-between">
-          <div class="d-flex align-center ga-3">
-            <v-icon color="primary">mdi-palette</v-icon>
-            <span class="text-body-2">主题色</span>
-          </div>
-          <div class="d-flex align-center ga-2">
-            <input type="color" :value="auth.userThemeColor" class="theme-picker" @input="onColorChange" />
-            <v-btn size="small" variant="tonal" color="primary" @click="saveThemeColor">保存</v-btn>
-          </div>
-        </div>
       </div>
     </v-card>
 
@@ -197,8 +176,5 @@ async function importNotes(e: Event) {
 </template>
 
 <style scoped>
-.stat-card { border-color: #424242 !important; }
-.theme-picker { width: 36px; height: 36px; border: none; border-radius: 50%; cursor: pointer; padding: 0; background: none; }
-.theme-picker::-webkit-color-swatch-wrapper { padding: 0; }
-.theme-picker::-webkit-color-swatch { border: 2px solid rgba(var(--v-theme-on-surface), 0.15); border-radius: 50%; }
+.stat-card { border-color: #424242 !important; background: rgba(var(--v-theme-surface), 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 </style>

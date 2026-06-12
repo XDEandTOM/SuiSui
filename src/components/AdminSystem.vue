@@ -153,5 +153,5 @@ loadSettings()
 </template>
 
 <style scoped>
-.stat-card { border-color: #424242 !important; }
+.stat-card { border-color: #424242 !important; background: rgba(var(--v-theme-surface), 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 </style>

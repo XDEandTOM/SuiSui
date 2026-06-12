@@ -17,6 +17,13 @@ const isOverflow = ref(false)
 const showShareDialog = ref(false)
 const shareLink = ref("")
 const shareCopied = ref(false)
+const showCopiedToast = ref(false)
+
+const TAG_COLORS = ["primary", "teal", "orange", "pink", "indigo", "cyan", "deep-purple", "amber"]
+function tagColor(tag: string) {
+  let h = 0; for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) | 0
+  return TAG_COLORS[Math.abs(h) % TAG_COLORS.length]
+}
 
 onMounted(() => { nextTick(checkOverflow) })
 
@@ -104,13 +111,12 @@ function timeAgo(ts: number) {
 }
 
 function copyContent() {
-  const text = props.memo.content
-  navigator.clipboard.writeText(text).then(() => {
-    // Brief toast feedback via snackbar or just ignore
+  navigator.clipboard.writeText(props.memo.content).then(() => {
+    showCopiedToast.value = true
+    setTimeout(() => showCopiedToast.value = false, 1500)
   }).catch(() => {
-    // Fallback
     const ta = document.createElement("textarea")
-    ta.value = text
+    ta.value = props.memo.content
     document.body.appendChild(ta)
     ta.select()
     document.execCommand("copy")
@@ -202,7 +208,7 @@ function copyShareLink() {
       </div>
       <div v-if="memo.tags && memo.tags.length" class="tags-row">
         <v-chip v-for="tag in memo.tags" :key="tag" size="x-small" variant="tonal"
-          color="primary" class="tag-chip-card">
+          :color="tagColor(tag)" class="tag-chip-card">
 #{{ tag }}
 </v-chip>
       </div>
@@ -261,6 +267,11 @@ function copyShareLink() {
       <div class="text-caption text-medium-emphasis mb-2">任何拥有此链接的人都可以查看这条笔记</div>
     </v-card>
   </v-dialog>
+  <Transition name="toast-fade">
+    <div v-if="showCopiedToast" class="copy-toast">
+      <v-icon size="small" class="mr-1">mdi-check</v-icon>已复制
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -269,14 +280,14 @@ function copyShareLink() {
   border-radius: 14px !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02), 0 1px 4px rgba(0,0,0,0.02);
   background: rgba(var(--v-theme-surface), 0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 .memo-card:hover {
   border-color: rgba(var(--v-theme-primary), 0.2);
-  box-shadow: 0 6px 24px rgba(var(--v-theme-primary), 0.06), 0 2px 6px rgba(0,0,0,0.04) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 8px 24px rgba(var(--v-theme-primary), 0.06) !important;
   transform: translateY(-2px);
 }
 .memo-card.pinned {
@@ -312,7 +323,7 @@ function copyShareLink() {
 }
 .memo-card:hover .action-btn,
 .memo-card:hover .pin-move-btn {
-  opacity: 0.6;
+  opacity: 0.8;
   transform: scale(1);
 }
 .action-btn:hover,
@@ -322,9 +333,9 @@ function copyShareLink() {
 .reactions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px; }
 .reaction-chip { font-size: 0.75rem; height: 26px !important; cursor: pointer; }
 .reaction-chip.active { outline: 1px solid rgb(var(--v-theme-primary)); }
-.reaction-add-btn { opacity: 0.4; }
+.reaction-add-btn { opacity: 0.4; transition: opacity 0.2s; }
 .reaction-add-btn:hover { opacity: 1; }
-.emoji-picker { background: rgb(var(--v-theme-surface)); border: 1px solid rgba(var(--v-theme-on-surface),0.12); border-radius: 12px; overflow: hidden; }
+.emoji-picker { background: rgba(var(--v-theme-surface), 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(var(--v-theme-on-surface),0.08); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
 .emoji-btn { font-size: 1.1rem; width: 32px; height: 32px; min-width: 0 !important; padding: 0 !important; }
 .cat-btn { font-size: 1rem; width: 28px; height: 28px; min-width: 0 !important; border-radius: 8px; opacity:0.5; transition:all 0.15s; }
 .cat-btn:hover { opacity:1; }
@@ -376,6 +387,18 @@ function copyShareLink() {
   .memo-card { border-radius: 10px !important; }
   .pin-move-btn, .action-btn { width: 24px !important; min-width: 24px !important; height: 24px !important; }
 }
+</style>
+<style>
+.copy-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  z-index: 9999; padding: 8px 18px; border-radius: 10px;
+  background: rgb(var(--v-theme-primary)); color: #fff;
+  font-size: 0.82rem; display: flex; align-items: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.toast-fade-enter-active { transition: all 0.2s ease; }
+.toast-fade-leave-active { transition: all 0.2s ease; }
+.toast-fade-enter-from, .toast-fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(8px); }
 </style>
 
 

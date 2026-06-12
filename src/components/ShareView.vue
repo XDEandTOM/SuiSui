@@ -31,6 +31,12 @@ async function loadEmojiData() {
 
 watch(showEmojiPicker, (v) => { if (v) loadEmojiData() })
 
+const TAG_COLORS = ["primary", "teal", "orange", "pink", "indigo", "cyan", "deep-purple", "amber"]
+function tagColor(tag: string) {
+  let h = 0; for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) | 0
+  return TAG_COLORS[Math.abs(h) % TAG_COLORS.length]
+}
+
 async function loadSharedNote() {
   const token = window.location.pathname.replace("/share/", "")
   if (!token) {
@@ -148,7 +154,7 @@ function toggleReaction(emoji: string) {
           <MarkdownPreview :content="note.content" />
         </div>
         <div v-if="note.tags && note.tags.length" class="d-flex flex-wrap ga-1 mt-1">
-          <v-chip v-for="tag in note.tags" :key="tag" size="x-small" variant="tonal" color="primary">
+          <v-chip v-for="tag in note.tags" :key="tag" size="x-small" variant="tonal" :color="tagColor(tag)">
             #{{ tag }}
           </v-chip>
         </div>
@@ -201,6 +207,10 @@ function toggleReaction(emoji: string) {
   align-items: center;
   padding: 16px 24px;
   border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.06);
+  background: rgba(var(--v-theme-surface), 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  position: sticky; top: 0; z-index: 10;
 }
 .share-home-link {
   display: flex;
@@ -269,7 +279,7 @@ function toggleReaction(emoji: string) {
 .reaction-chip.active { outline: 1px solid rgb(var(--v-theme-primary)); }
 .reaction-add-btn { opacity: 0.4; }
 .reaction-add-btn:hover { opacity: 1; }
-.emoji-picker { background: rgb(var(--v-theme-surface)); border: 1px solid rgba(var(--v-theme-on-surface),0.12); border-radius: 12px; overflow: hidden; }
+.emoji-picker { background: rgba(var(--v-theme-surface), 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(var(--v-theme-on-surface),0.08); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
 .emoji-btn { font-size: 1.1rem; width: 32px; height: 32px; min-width: 0 !important; padding: 0 !important; }
 .cat-btn { font-size: 1rem; width: 28px; height: 28px; min-width: 0 !important; border-radius: 8px; opacity:0.5; transition:all 0.15s; }
 .cat-btn:hover { opacity:1; }

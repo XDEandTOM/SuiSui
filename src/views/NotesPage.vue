@@ -19,6 +19,13 @@ const isMobile = mobile
 const localSearch = ref("")
 const selectedTag = ref("")
 const selectedDay = ref("")
+const viewMode = ref<"list" | "timeline">("list")
+
+const TAG_COLORS = ["primary", "teal", "orange", "pink", "indigo", "brown", "cyan", "deep-purple", "amber", "blue-grey"]
+function tagColor(tag: string) {
+  let h = 0; for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) | 0
+  return TAG_COLORS[Math.abs(h) % TAG_COLORS.length]
+}
 
 const siteIcp = ref("")
 const versionText = ref("")
@@ -45,6 +52,24 @@ const zoomedUpload = ref("")
 const showTrash = ref(false)
 const deletedNotes = ref<Note[]>([])
 const hasDraft = computed(() => !!(inlineContent.value || uploadedImages.value.length))
+
+const timelineGroups = computed(() => {
+  const groups: { date: string; notes: Note[] }[] = []
+  const today = new Date()
+  const todayStr = today.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "short" })
+  for (const note of store.notes) {
+    const d = new Date(note.createdAt)
+    let label: string
+    const diffDays = Math.floor((today.getTime() - d.getTime()) / 86400000)
+    if (diffDays === 0) label = "今天"
+    else if (diffDays === 1) label = "昨天"
+    else label = d.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })
+    const last = groups[groups.length - 1]
+    if (last && last.date === label) last.notes.push(note)
+    else groups.push({ date: label, notes: [note] })
+  }
+  return groups
+})
 
 // Scroll sentinel
 const scrollSentinel = ref<HTMLDivElement | null>(null)
@@ -83,6 +108,7 @@ onMounted(async () => {
   await loadSiteIcp()
   fetchVersion()
   restoreDraft()
+  handleClipParam()
   setupInfiniteScroll()
   document.addEventListener("keydown", handleGlobalKeydown)
 })
@@ -139,6 +165,17 @@ async function fetchVersion() {
       versionText.value = d.tag_name || ""
     }
   } catch { versionText.value = "" }
+}
+
+function handleClipParam() {
+  const params = new URLSearchParams(window.location.search)
+  const clip = params.get("clip")
+  if (clip && !editingNoteId.value) {
+    inlineContent.value = clip
+    nextTick(() => { inlineTextarea.value?.focus() })
+    // Clean URL without refresh
+    window.history.replaceState({}, "", window.location.pathname)
+  }
 }
 
 function insertMd(b: string, f: string, fb: string) {
@@ -347,7 +384,7 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
           </div>
           <div class="d-flex flex-wrap ga-1">
             <v-chip v-for="[tag] in store.allTags" :key="tag" size="x-small" class="tag-chip"
-              color="primary"
+              :color="tagColor(tag)"
               :variant="selectedTag === tag ? 'flat' : 'outlined'"
               @click="selectedTag = selectedTag === tag ? '' : tag">
               #{{ tag }}
@@ -377,7 +414,7 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
             <div class="d-flex align-center ga-2 mb-3"><span class="text-subtitle-2 font-weight-medium">标签</span></div>
             <div class="d-flex flex-wrap ga-1">
               <v-chip v-for="[tag] in store.allTags" :key="tag" size="x-small" class="tag-chip"
-                color="primary"
+                :color="tagColor(tag)"
                 :variant="selectedTag === tag ? 'flat' : 'outlined'" @click="selectedTag = selectedTag === tag ? '' : tag; emit('close-heatmap')">
                 #{{ tag }}
               </v-chip>
@@ -476,14 +513,25 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
         </div>
       </div>
 
-      <div v-if="!store.loaded" class="d-flex justify-center py-16">
-        <v-progress-circular indeterminate color="primary" />
+      <div v-if="!store.loaded" class="d-flex flex-column ga-3 px-1">
+        <div v-for="i in 3" :key="i" class="skeleton-card">
+          <div class="skeleton-row" style="width:65%" />
+          <div class="skeleton-row" style="width:45%" />
+          <div class="skeleton-row" style="width:85%" />
+        </div>
       </div>
       <template v-else>
         <div v-if="selectedDay" class="date-filter-bar">
           <v-icon size="x-small" color="primary">mdi-calendar</v-icon>
           <span>{{ selectedDay }} 的碎片笔记</span>
           <v-btn icon="mdi-close" size="x-small" variant="text" @click="selectedDay = ''" />
+        </div>
+        <div class="view-bar">
+          <div class="view-bar-title">{{ viewMode === 'list' ? '列表' : '时间线' }}</div>
+          <v-btn-toggle v-model="viewMode" density="compact" color="primary" variant="tonal" mandatory class="view-toggle" rounded="8">
+            <v-btn icon="mdi-view-list" value="list" size="small" />
+            <v-btn icon="mdi-timeline" value="timeline" size="small" />
+          </v-btn-toggle>
         </div>
         <div v-if="store.notes.length === 0" class="empty-state">
           <div class="empty-illust">
@@ -507,19 +555,35 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
           <p v-else class="empty-text-title">还没有碎片笔记</p>
           <p v-if="!localSearch && !selectedTag && !selectedDay" class="empty-text-hint">点击上方编辑框，写下你的第一段记忆吧 ✨</p>
         </div>
-        <div class="d-flex flex-column ga-4">
-          <div v-for="(note, idx) in store.notes" :key="note.id" class="note-drag-wrapper"
-            :style="{ animationDelay: `${idx * 0.05}s` }">
-            <NoteCard :memo="note" :search-query="localSearch" :logged-in="auth.isLoggedIn" @edit="handleEdit" @move-pin="movePinnedNote" />
+        <Transition name="view-fade" mode="out-in">
+          <div v-if="viewMode === 'list'" class="d-flex flex-column ga-4" key="list">
+            <div v-for="(note, idx) in store.notes" :key="note.id" class="note-drag-wrapper"
+              :style="{ animationDelay: `${idx * 0.05}s` }">
+              <NoteCard :memo="note" :search-query="localSearch" :logged-in="auth.isLoggedIn" @edit="handleEdit" @move-pin="movePinnedNote" />
+            </div>
           </div>
-        </div>
+          <div v-else class="timeline-view" key="timeline">
+            <div v-for="(group, gi) in timelineGroups" :key="gi" class="timeline-group">
+              <div class="timeline-date-label">{{ group.date }}</div>
+              <div class="timeline-line" />
+              <div v-for="(note, ni) in group.notes" :key="note.id" class="timeline-item"
+                :style="{ animationDelay: `${(gi * 5 + ni) * 0.05}s` }">
+                <div class="timeline-dot" />
+                <NoteCard :memo="note" :search-query="localSearch" :logged-in="auth.isLoggedIn"
+                  @edit="handleEdit" @move-pin="movePinnedNote" />
+              </div>
+            </div>
+          </div>
+        </Transition>
         <!-- Infinite scroll sentinel -->
         <div ref="scrollSentinel" class="scroll-sentinel">
           <div v-if="store.loadingMore" class="d-flex justify-center py-4">
             <v-progress-circular indeterminate size="24" color="primary" />
           </div>
-          <div v-else-if="!store.hasMore && store.notes.length > 0" class="text-center text-caption py-4" style="opacity:0.4">
-            — 已显示全部 {{ store.total }} 条笔记 —
+          <div v-else-if="!store.hasMore && store.notes.length > 0" class="scroll-end">
+            <div class="scroll-end-line" />
+            <span class="scroll-end-text">共 {{ store.total }} 条碎片笔记</span>
+            <div class="scroll-end-line" />
           </div>
         </div>
       </template>
@@ -564,7 +628,7 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 .md-toolbar::-webkit-scrollbar { height: 3px; }
 .notes-layout.mobile { flex-direction: column; padding: 12px; gap: 12px; }
 .side-col { width: 280px; flex-shrink: 0; position: sticky; top: 24px; align-self: flex-start; }
-.notes-layout.mobile .side-col { display: none; }
+.notes-layout.mobile .side-col { opacity: 0; pointer-events: none; max-height: 0; overflow: hidden; transition: opacity 0.3s, max-height 0.3s; }
 .main-col { flex: 1; min-width: 0; }
 .tag-chip { cursor: pointer; }
 .tag-chip:hover { opacity: 0.9; }
@@ -653,12 +717,14 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 }
 .date-filter-bar {
   display: flex; align-items: center; gap: 8px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   margin-bottom: 8px;
   background: rgba(var(--v-theme-primary), 0.06);
-  border: 1px solid rgba(var(--v-theme-primary), 0.15);
-  border-radius: 8px;
-  font-size: 0.8rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  border-radius: 10px;
+  font-size: 0.82rem;
   color: rgb(var(--v-theme-primary));
 }
 .note-drag-wrapper {
@@ -674,6 +740,70 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 .scroll-sentinel {
   min-height: 40px;
 }
+.scroll-end {
+  display: flex; align-items: center; gap: 12px; justify-content: center;
+  padding: 16px 0; opacity: 0.3;
+}
+.scroll-end-line { flex: 1; max-width: 80px; height: 1px; background: rgba(var(--v-theme-on-surface), 0.15); }
+.scroll-end-text { font-size: 0.72rem; white-space: nowrap; letter-spacing: 0.3px; }
+
+/* Input focus glow */
+:global(.v-field--focused) { box-shadow: 0 0 0 2px rgba(var(--v-theme-primary), 0.08); }
+
+/* Timeline view */
+.timeline-view { position: relative; }
+.timeline-group { position: relative; padding-left: 28px; margin-bottom: 8px; }
+
+/* View mode transition */
+.view-fade-enter-active, .view-fade-leave-active { transition: opacity 0.15s ease; }
+.view-fade-enter-from, .view-fade-leave-to { opacity: 0; }
+
+.timeline-date-label {
+  font-size: 0.78rem; font-weight: 600; padding: 4px 0 8px;
+  color: rgba(var(--v-theme-on-surface), 0.5);
+  position: relative; z-index: 1;
+}
+.timeline-line {
+  position: absolute; left: 10px; top: 24px; bottom: 0;
+  width: 2px; background: rgba(var(--v-theme-primary), 0.12);
+  border-radius: 1px;
+}
+.timeline-item {
+  position: relative; margin-bottom: 8px;
+  animation: cardFadeIn 0.35s ease both;
+}
+.timeline-dot {
+  position: absolute; left: -22px; top: 16px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgb(var(--v-theme-primary)); opacity: 0.3;
+  z-index: 1;
+}
+.view-toggle { border-radius: 8px; overflow: hidden; }
+.view-toggle :deep(.v-btn) { border-radius: 0 !important; }
+.view-bar {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px; padding: 4px 0;
+}
+.view-bar-title {
+  font-size: 0.72rem; font-weight: 500; opacity: 0.35;
+  transition: opacity 0.2s;
+}
+
+/* Skeleton loading */
+.skeleton-card {
+  border-radius: 14px; padding: 16px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.06);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.skeleton-row {
+  height: 14px; border-radius: 6px;
+  background: linear-gradient(90deg,
+    rgba(var(--v-theme-on-surface), 0.06) 25%,
+    rgba(var(--v-theme-on-surface), 0.12) 50%,
+    rgba(var(--v-theme-on-surface), 0.06) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 @media (max-width: 768px) {
   .notes-layout.mobile { flex-direction: column; padding: 12px; gap: 8px; }

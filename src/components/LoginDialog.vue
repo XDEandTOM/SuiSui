@@ -50,7 +50,7 @@ function resetForm() {
 <template>
   <v-dialog :model-value="modelValue" max-width="400"
     persistent transition="dialog-bottom-transition" @update:model-value="emit('update:modelValue', $event)">
-    <v-card class="rounded-xl" rounded="xl">
+    <v-card class="rounded-xl login-card" rounded="xl">
       <v-card-title class="d-flex align-center pa-4 pb-0">
         <div class="d-flex align-center ga-2">
           <v-icon color="primary">mdi-account-lock</v-icon>
@@ -84,3 +84,7 @@ function resetForm() {
     </v-card>
   </v-dialog>
 </template>
+
+<style scoped>
+.login-card { background: rgba(var(--v-theme-surface), 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+</style>
