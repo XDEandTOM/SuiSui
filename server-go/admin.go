@@ -213,6 +213,20 @@ func handleAdmin(w http.ResponseWriter, r *http.Request, path string) {
 			os.Exit(0)
 		}()
 
+	case path == "/admin/config/brotli" && r.Method == "GET":
+		jsonResp(w, map[string]bool{"enabled": brotliEnabled})
+
+	case path == "/admin/config/brotli" && r.Method == "POST":
+		tokenUser, tokenValid := verifyToken(r)
+		if !tokenValid { errResp(w, "unauthorized", 401); return }
+		var callerRole string
+		db.QueryRow("SELECT role FROM users WHERE username=?", tokenUser).Scan(&callerRole)
+		if callerRole != "admin" { errResp(w, "forbidden", 403); return }
+		var body struct{ Enabled bool }
+		if json.NewDecoder(r.Body).Decode(&body) != nil { errResp(w, "invalid request", 400); return }
+		brotliEnabled = body.Enabled
+		jsonResp(w, successResponse{Success: "ok"})
+
 	default:
 		parts := strings.Split(strings.TrimPrefix(path, "/admin/users/"), "/")
 		tokenUser, tokenValid := verifyToken(r)

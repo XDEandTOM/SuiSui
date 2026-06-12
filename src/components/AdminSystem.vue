@@ -24,6 +24,23 @@ const showDomainDialog = ref(false)
 const certText = ref("")
 const keyText = ref("")
 const savingSSL = ref(false)
+const brotliEnabled = ref(true)
+
+async function loadBrotliConfig() {
+  try {
+    const r = await authFetch("/api/admin/config/brotli")
+    if (r.ok) { const d = await r.json(); brotliEnabled.value = d.enabled }
+  } catch { console.warn("loadBrotli failed") }
+}
+
+async function toggleBrotli() {
+  try {
+    await authFetch("/api/admin/config/brotli", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: brotliEnabled.value })
+    })
+  } catch { console.warn("toggleBrotli failed") }
+}
 
 async function saveSSL() {
   if (!certText.value || !keyText.value) { alert("请填写证书和私钥内容"); return }
@@ -119,6 +136,7 @@ async function toggleRegister(val: boolean) {
 // Load on mount
 loadSettings()
 loadServerConfig()
+loadBrotliConfig()
 </script>
 
 <template>
@@ -207,6 +225,10 @@ loadServerConfig()
         </div>
         <v-divider />
         <div class="d-flex align-center justify-space-between">
+          <span class="text-body-2">Brotli 压缩</span>
+          <v-switch v-model="brotliEnabled" hide-details density="compact" color="primary" @update:model-value="toggleBrotli" />
+        <v-divider />
+        <div class="d-flex align-center justify-space-between">
           <span class="text-body-2">数据目录</span>
           <span class="text-body-2 text-medium-emphasis text-caption">{{ serverConfig.dataDir || "—" }}</span>
         </div>
@@ -224,7 +246,8 @@ loadServerConfig()
           </div>
         </div>
       </div>
-    </v-card>
+    </div>
+</v-card>
 
     <!-- Title Dialog -->
     <v-dialog v-model="showTitleDialog" max-width="400">

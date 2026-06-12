@@ -28,6 +28,7 @@ var Version = "dev"
 var serverPort = "3742"
 var serverCertFile = ""
 var serverKeyFile = ""
+var brotliEnabled = true
 
 func main() {
 	port := os.Getenv("PORT")
@@ -155,7 +156,7 @@ func compressMiddleware(next http.Handler) http.Handler {
 		}
 
 		ae := r.Header.Get("Accept-Encoding")
-		if strings.Contains(ae, "br") {
+		if brotliEnabled && strings.Contains(ae, "br") {
 			w.Header().Set("Content-Encoding", "br")
 			w.Header().Set("Vary", "Accept-Encoding")
 			bw := brotli.NewWriterLevel(w, brotli.DefaultCompression)
