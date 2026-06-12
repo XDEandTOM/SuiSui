@@ -7,6 +7,7 @@ import { authFetch } from "@/utils/api"
 import NoteCard from "@/components/NoteCard.vue"
 import Heatmap from "@/components/Heatmap.vue"
 import InlineEditor from "@/components/InlineEditor.vue"
+import SidePanel from "@/components/SidePanel.vue"
 
 defineProps<{ mobileHeatmap: boolean }>()
 const emit = defineEmits<{ "close-heatmap": [] }>()
