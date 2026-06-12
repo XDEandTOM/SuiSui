@@ -174,6 +174,7 @@ func handleUploads(w http.ResponseWriter, r *http.Request) {
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
 	}
+	w.Header().Set("Cache-Control", "public, max-age=604800")
 	http.ServeFile(w, r, fullPath)
 }
 
@@ -186,6 +187,7 @@ func handleStatic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache, must-revalidate")
 		w.Write(data)
 		return
 	}
@@ -197,6 +199,7 @@ func handleStatic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache, must-revalidate")
 		w.Write(data)
 		return
 	}
@@ -204,6 +207,10 @@ func handleStatic(w http.ResponseWriter, r *http.Request) {
 	mime := map[string]string{".js": "application/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".woff": "font/woff", ".woff2": "font/woff2", ".ico": "image/x-icon"}
 	if m, ok := mime[ext]; ok {
 		w.Header().Set("Content-Type", m)
+	}
+	// Hash-based assets (.js/.css/.woff2 etc.) — cache forever
+	if ext == ".js" || ext == ".css" || ext == ".woff2" || ext == ".woff" || ext == ".ttf" || ext == ".eot" || ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp" || ext == ".ico" || ext == ".svg" {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	}
 	w.Write(data)
 }
