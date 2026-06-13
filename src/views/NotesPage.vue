@@ -48,6 +48,8 @@ const zoomedUpload = ref("")
 const showTrash = ref(false)
 const deletedNotes = ref<Note[]>([])
 const editorRef = ref<InstanceType<typeof InlineEditor> | null>(null)
+const newNotesCount = ref(0)
+let pollingTimer: ReturnType<typeof setInterval> | null = null
 
 
 const timelineGroups = computed(() => {
@@ -93,7 +95,7 @@ function saveDraft() {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)) } catch { console.warn("saveDraft failed") }
 }
 
-function restoreDraft() {
+function restoreDraft() { // eslint-disable-line @typescript-eslint/no-unused-vars
   try {
     const raw = localStorage.getItem(DRAFT_KEY)
     if (!raw) return
@@ -119,15 +121,16 @@ onMounted(async () => {
   await store.fetchNotes(true)
   await loadSiteIcp()
   fetchVersion()
-  restoreDraft()
   handleClipParam()
   setupInfiniteScroll()
   document.addEventListener("keydown", handleGlobalKeydown)
+  startPolling()
 })
 onBeforeUnmount(() => {
   zoomedUpload.value = ""
   if (scrollObserver) scrollObserver.disconnect()
   document.removeEventListener("keydown", handleGlobalKeydown)
+  stopPolling()
 })
 
 function setupInfiniteScroll() {
@@ -243,6 +246,44 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
+function startPolling() {
+  // Use SSE for real-time updates
+  const evtSource = new EventSource('/api/events')
+  evtSource.addEventListener('note', () => {
+    // Check for new notes
+    fetch('/api/notes?limit=1&offset=0').then(r => r.json()).then(data => {
+      if (data.total > store.total && store.total > 0) {
+        newNotesCount.value = data.total - store.total
+      }
+    }).catch(() => {})
+  })
+  // Fallback polling if SSE fails
+  pollingTimer = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/notes?limit=1&offset=0`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.total > store.total && store.total > 0) {
+          newNotesCount.value = data.total - store.total
+        }
+      }
+    } catch { /* ignore polling errors */ }
+  }, 60000)
+}
+
+function stopPolling() {
+  if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null }
+}
+
+function refreshNotes() {
+  store.fetchNotes(true)
+  newNotesCount.value = 0
+  // Also update total via a lightweight fetch
+  fetch('/api/notes?limit=1&offset=0').then(r => r.json()).then(data => {
+    if (data.total) store.total = data.total
+  }).catch(() => {})
+}
+
 async function movePinnedNote(note: Note, dir: "up" | "down") {
   const pinned = store.notes.filter(n => n.pinned)
   const idx = pinned.findIndex(n => n.id === note.id)
@@ -354,6 +395,10 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
               <span>时间线</span>
             </button>
           </div>
+        </div>
+        <div v-if="newNotesCount > 0" class="new-notes-bar" @click="refreshNotes">
+          <v-icon size="small" color="primary">mdi-arrow-up-circle</v-icon>
+          <span>有 {{ newNotesCount }} 条新的碎片笔记</span>
         </div>
         <div v-if="store.notes.length === 0" class="empty-state">
           <div class="empty-illust">
@@ -580,6 +625,17 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 /* View mode transition */
 .view-fade-enter-active, .view-fade-leave-active { transition: opacity 0.15s ease; }
 .view-fade-enter-from, .view-fade-leave-to { opacity: 0; }
+
+/* New notes notification */
+.new-notes-bar {
+  display: flex; align-items: center; gap: 6px; justify-content: center;
+  padding: 8px 14px; margin-bottom: 8px;
+  background: rgba(var(--v-theme-primary), 0.06);
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
+  border-radius: 10px; cursor: pointer; font-size: 0.82rem;
+  color: rgb(var(--v-theme-primary)); transition: background 0.15s;
+}
+.new-notes-bar:hover { background: rgba(var(--v-theme-primary), 0.1); }
 
 /* Outline */
 .outline-count {

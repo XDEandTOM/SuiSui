@@ -165,6 +165,7 @@ func handleNotes(w http.ResponseWriter, r *http.Request, path string) {
 			errResp(w, "碎片笔记创建失败", 500)
 			return
 		}
+		sseBroadcast("note", "updated")
 		jsonResp(w, successResponse{Success: "ok"})
 
 	case strings.Contains(path, "/upload") && r.Method == "POST":
@@ -239,6 +240,7 @@ func handleNotes(w http.ResponseWriter, r *http.Request, path string) {
 				return
 			}
 		}
+		sseBroadcast("note", "updated")
 		jsonResp(w, successResponse{Success: "ok"})
 	case path == "/notes/reorder" && r.Method == "PATCH":
 		tokenUser, tokenValid := verifyToken(r)
@@ -257,6 +259,7 @@ func handleNotes(w http.ResponseWriter, r *http.Request, path string) {
 				return
 			}
 		}
+		sseBroadcast("note", "updated")
 		jsonResp(w, successResponse{Success: "ok"})
 	default:
 		parts := strings.Split(strings.TrimPrefix(path, "/notes/"), "/")
@@ -298,7 +301,8 @@ func handleNotes(w http.ResponseWriter, r *http.Request, path string) {
 				errResp(w, "碎片笔记更新失败", 500)
 				return
 			}
-			jsonResp(w, successResponse{Success: "ok"})
+			sseBroadcast("note", "updated")
+		jsonResp(w, successResponse{Success: "ok"})
 		} else if len(parts) == 1 && r.Method == "DELETE" {
 			username := r.URL.Query().Get("username")
 			if username == "" {
@@ -339,7 +343,8 @@ func handleNotes(w http.ResponseWriter, r *http.Request, path string) {
 				errResp(w, "删除失败", 500)
 				return
 			}
-			jsonResp(w, successResponse{Success: "ok"})
+			sseBroadcast("note", "updated")
+		jsonResp(w, successResponse{Success: "ok"})
 		} else if len(parts) == 2 && parts[1] == "pin" && r.Method == "PATCH" {
 			_, tokenValid := verifyToken(r)
 			if !tokenValid {
@@ -350,7 +355,8 @@ func handleNotes(w http.ResponseWriter, r *http.Request, path string) {
 				errResp(w, "操作失败", 500)
 				return
 			}
-			jsonResp(w, successResponse{Success: "ok"})
+			sseBroadcast("note", "updated")
+		jsonResp(w, successResponse{Success: "ok"})
 		}
 	}
 }
@@ -431,6 +437,7 @@ func handleTrash(w http.ResponseWriter, r *http.Request, path string) {
 			errResp(w, "恢复失败", 500)
 			return
 		}
+		sseBroadcast("note", "updated")
 		jsonResp(w, successResponse{Success: "ok"})
 		return
 	}
@@ -453,6 +460,7 @@ func handleTrash(w http.ResponseWriter, r *http.Request, path string) {
 			errResp(w, "not found", 404)
 			return
 		}
+		sseBroadcast("note", "updated")
 		jsonResp(w, successResponse{Success: "ok"})
 		return
 	}

@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -13,6 +14,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -30,6 +32,52 @@ var serverCertFile = ""
 var serverKeyFile = ""
 var brotliEnabled = true
 var githubToken = ""
+
+// SSE event hub
+var sseClients = make(map[chan string]bool)
+var sseMu sync.Mutex
+
+func sseBroadcast(event string, data string) {
+	sseMu.Lock()
+	defer sseMu.Unlock()
+	msg := fmt.Sprintf("event: %s\ndata: %s\n\n", event, data)
+	for ch := range sseClients {
+		select {
+		case ch <- msg:
+		default:
+			close(ch)
+			delete(sseClients, ch)
+		}
+	}
+}
+
+func sseHandler(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok { http.NotFound(w, r); return }
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	ch := make(chan string, 3)
+	sseMu.Lock()
+	sseClients[ch] = true
+	sseMu.Unlock()
+
+	notify := r.Context().Done()
+	go func() {
+		<-notify
+		sseMu.Lock()
+		delete(sseClients, ch)
+		close(ch)
+		sseMu.Unlock()
+	}()
+
+	for msg := range ch {
+		fmt.Fprint(w, msg)
+		flusher.Flush()
+	}
+}
 
 func main() {
 	port := os.Getenv("PORT")
@@ -262,6 +310,8 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 		handleShareView(w, r)
 	case strings.HasPrefix(path, "/settings"):
 		handleSettings(w, r)
+	case path == "/events":
+		sseHandler(w, r)
 	case path == "/admin/config":
 		jsonResp(w, map[string]interface{}{
 			"version": Version,
