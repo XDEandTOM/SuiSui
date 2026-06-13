@@ -7,6 +7,8 @@ import { authFetch } from "@/utils/api"
 const store = useNotesStore()
 const auth = useAuthStore()
 
+const emit = defineEmits<{ submitted: [] }>()
+
 const inlineContent = ref("")
 const inlineTagsInput = ref<string[]>([])
 const showInlineTags = ref(false)
@@ -88,7 +90,7 @@ async function submitInline() {
   for (const url of uploadedImages.value) content += "\n\n![](" + url + ")"
   if (editingNoteId.value) { await store.updateNote(editingNoteId.value, content.trim(), tags, auth.userName); editingNoteId.value = "" }
   else { await store.addNote(content.trim(), tags, auth.userName) }
-  ;(window as any).__suppressNewNotes?.()
+  emit("submitted")
   inlineContent.value = ""; inlineTagsInput.value = []; uploadedImages.value = []; showInlineTags.value = false; clearDraft()
   nextTick(() => { if (inlineTextarea.value) inlineTextarea.value.style.height = '' })
 }

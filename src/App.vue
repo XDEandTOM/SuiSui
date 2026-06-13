@@ -236,7 +236,7 @@ html, body { font-family: "Maple Mono NF CN", -apple-system, BlinkMacSystemFont,
   align-items: center;
   padding: 12px 0;
   border-right: 1px solid rgba(var(--v-theme-on-surface), 0.08);
-  background: rgba(var(--v-theme-surface), 0.55);
+  background: rgba(var(--v-theme-surface), 0.3);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 100;

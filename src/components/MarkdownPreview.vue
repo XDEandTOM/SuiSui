@@ -44,14 +44,10 @@ renderer.code = ({ text, lang }) => {
     if (lang && hljs.getLanguage(lang)) highlighted = hljs.highlight(text, { language: lang }).value
     else highlighted = hljs.highlightAuto(text).value
   } catch { highlighted = text }
-  const langAttr = lang ? ` class="language-${lang}"` : ""
   const encoded = encodeURIComponent(text)
-  const lines = text.split("\n").length
   return `<div class="code-block-wrapper">
-    <div class="code-header"><span class="code-dot red"></span><span class="code-dot yellow"></span><span class="code-dot green"></span>${lang ? `<span class="code-lang">${lang}</span>` : ""}</div>
-    <div class="code-body"><div class="code-gutter">${Array.from({length: lines}, (_, i) => `<span class="code-line-num">${i + 1}</span>`).join("")}</div>
-    <pre><code${langAttr}>${highlighted}</code></pre></div>
-    <button class="copy-btn" data-code="${encoded}"><svg style="pointer-events:none" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    <div class="code-header"><span class="code-dot red"></span><span class="code-dot yellow"></span><span class="code-dot green"></span><span class="code-lang">${lang || ""}</span><button class="copy-btn" data-code="${encoded}" title="复制代码"><svg style="pointer-events:none" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
+    <div class="code-body"><pre><code class="language-${lang || ""}">${highlighted}</code></pre></div>
   </div>`
 }
 renderer.listitem = ({ text, task, checked }) => {
@@ -261,7 +257,15 @@ function handleClick(e: MouseEvent) {
 .markdown-body :deep(.code-dot.red) { background: #ff5f57; }
 .markdown-body :deep(.code-dot.yellow) { background: #febc2e; }
 .markdown-body :deep(.code-dot.green) { background: #28c840; }
-.markdown-body :deep(.code-lang) { margin-left: auto; font-size: 0.7rem; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.5px; }
+.markdown-body :deep(.code-lang) { font-size: 0.7rem; opacity: 0.3; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; }
+.markdown-body :deep(.copy-btn) {
+  width: 24px; height: 24px; border-radius: 5px; border: none;
+  background: transparent; color: rgba(var(--v-theme-on-surface), 0.3);
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.markdown-body :deep(.copy-btn:hover) { background: rgba(var(--v-theme-on-surface), 0.06); color: rgba(var(--v-theme-on-surface), 0.7); }
+.markdown-body :deep(.copy-btn svg) { pointer-events: none; }
 .markdown-body :deep(.code-body) { display: flex; }
 .markdown-body :deep(.code-gutter) {
   display: flex; flex-direction: column; align-items: flex-end; padding: 12px 8px;
@@ -274,14 +278,6 @@ function handleClick(e: MouseEvent) {
 }
 .markdown-body :deep(.code-body pre) { background: none; border-radius: 0; margin: 0; padding: 12px 0; }
 .markdown-body :deep(pre) { margin: 0; }
-.markdown-body :deep(.copy-btn) {
-  position: absolute; top: 4px; right: 4px; width: 28px; height: 28px;
-  padding: 0; display: flex; align-items: center; justify-content: center;
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.15); border-radius: 4px;
-  background: rgb(var(--v-theme-surface)); color: rgba(var(--v-theme-on-surface), 0.6);
-  cursor: pointer; opacity: 0; transition: opacity 0.2s;
-}
-.markdown-body :deep(.code-block-wrapper:hover .copy-btn) { opacity: 1; }
 .markdown-body :deep(.copy-btn:hover) { background: rgba(var(--v-theme-primary), 0.08); color: rgb(var(--v-theme-primary)); border-color: rgba(var(--v-theme-primary), 0.3); }
 .markdown-body :deep(.carousel-wrap) { position: relative; margin: .5em 0; border-radius: 8px; overflow: hidden; background: rgba(var(--v-theme-on-surface), 0.03); }
 .markdown-body :deep(.img-grid) { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: .2em 0; }

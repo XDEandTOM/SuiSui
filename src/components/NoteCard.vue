@@ -178,6 +178,8 @@ function copyShareLink() {
             @click="store.togglePin(memo.id)" />
           <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" class="action-btn"
             @click="store.deleteNote(memo.id, auth.userName)" />
+        </div>
+        <div class="d-flex ga-0 flex-shrink-0" style="margin-top:2px">
           <v-btn icon="mdi-share-variant" size="x-small" variant="text" class="action-btn"
             @click="shareNote" />
           <v-menu location="bottom">

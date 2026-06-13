@@ -32,33 +32,23 @@ function tagColor(tag: string) {
 const siteIcp = ref("")
 const versionText = ref("")
 const icpLink = "https://beian.miit.gov.cn/#/Integrated/index"
-const DRAFT_KEY = "suisui-draft"
 
-const inlineContent = ref("")
-const inlineTagsInput = ref<string[]>([])
 
 const showShortcuts = ref(false)
 
 
-const inlineTextarea = ref<HTMLTextAreaElement | null>(null)
 
-const uploadedImages = ref<string[]>([])
-const editingNoteId = ref("")
 const zoomedUpload = ref("")
 const showTrash = ref(false)
 const deletedNotes = ref<Note[]>([])
 const editorRef = ref<InstanceType<typeof InlineEditor> | null>(null)
 const newNotesCount = ref(0)
-let suppressNewNotesTimer: ReturnType<typeof setTimeout> | null = null
+let lastActionAt = 0
 let pollingTimer: ReturnType<typeof setInterval> | null = null
 
-function suppressNewNotes() {
-  if (suppressNewNotesTimer) clearTimeout(suppressNewNotesTimer)
-  suppressNewNotesTimer = setTimeout(() => { suppressNewNotesTimer = null }, 3000)
+function onNoteSubmitted() {
+  lastActionAt = Date.now()
 }
-
-// Expose globally so InlineEditor can call it after submit
-;(window as any).__suppressNewNotes = suppressNewNotes
 
 
 const timelineGroups = computed(() => {
@@ -98,39 +88,14 @@ function scrollToNote(noteId: string) {
 const scrollSentinel = ref<HTMLDivElement | null>(null)
 let scrollObserver: IntersectionObserver | null = null
 
-function saveDraft() {
-  if (!auth.isLoggedIn) return
-  const draft = { content: inlineContent.value, tags: inlineTagsInput.value, images: uploadedImages.value, editingId: editingNoteId.value }
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)) } catch { console.warn("saveDraft failed") }
-}
 
-function restoreDraft() { // eslint-disable-line @typescript-eslint/no-unused-vars
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY)
-    if (!raw) return
-    const draft: { content?: string; tags?: string | string[]; images?: string[]; editingId?: string } = JSON.parse(raw)
-    if (draft.content) inlineContent.value = draft.content
-    if (draft.tags) { inlineTagsInput.value = typeof draft.tags === "string" ? draft.tags.split(/[,，]/).map(t => t.trim()).filter(Boolean) : draft.tags }
-    if (draft.images?.length) uploadedImages.value = draft.images
-    if (draft.editingId) editingNoteId.value = draft.editingId
-  } catch { console.warn("restoreDraft failed") }
-}
 
-function clearDraft() { // eslint-disable-line @typescript-eslint/no-unused-vars
-  localStorage.removeItem(DRAFT_KEY)
-}
 
-let draftTimer: ReturnType<typeof setTimeout> | null = null
-watch([inlineContent, inlineTagsInput, uploadedImages, editingNoteId], () => {
-  if (draftTimer) clearTimeout(draftTimer)
-  draftTimer = setTimeout(saveDraft, 500)
-}, { deep: true })
 
 onMounted(async () => {
   await store.fetchNotes(true)
   await loadSiteIcp()
   fetchVersion()
-  handleClipParam()
   setupInfiniteScroll()
   document.addEventListener("keydown", handleGlobalKeydown)
   startPolling()
@@ -191,16 +156,6 @@ async function fetchVersion() {
   } catch { versionText.value = "" }
 }
 
-function handleClipParam() {
-  const params = new URLSearchParams(window.location.search)
-  const clip = params.get("clip")
-  if (clip && !editingNoteId.value) {
-    inlineContent.value = clip
-    nextTick(() => { inlineTextarea.value?.focus() })
-    // Clean URL without refresh
-    window.history.replaceState({}, "", window.location.pathname)
-  }
-}
 
 async function fetchDeletedNotes() { // eslint-disable-line @typescript-eslint/no-unused-vars
   try {
@@ -246,7 +201,7 @@ function handleGlobalKeydown(e: KeyboardEvent) {
 function startPolling() {
   const evtSource = new EventSource('/api/events')
   evtSource.addEventListener('note', () => {
-    if (suppressNewNotesTimer) return
+    if (Date.now() - lastActionAt < 3000) return
     fetch('/api/notes?limit=1&offset=0').then(r => r.json()).then(data => {
       if (data.total > store.total && store.total > 0) {
         newNotesCount.value = data.total - store.total
@@ -254,7 +209,7 @@ function startPolling() {
     }).catch(() => {})
   })
   pollingTimer = setInterval(async () => {
-    if (suppressNewNotesTimer) return
+    if (Date.now() - lastActionAt < 3000) return
     try {
       const res = await fetch(`/api/notes?limit=1&offset=0`)
       if (res.ok) {
@@ -264,7 +219,7 @@ function startPolling() {
         }
       }
     } catch { /* ignore polling errors */ }
-  }, 60000)
+  }, 15000)
 }
 
 function stopPolling() {
@@ -366,7 +321,7 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
         </v-card>
       </v-dialog>
 
-      <InlineEditor ref="editorRef" />
+      <InlineEditor ref="editorRef" @submitted="onNoteSubmitted" />
       <div v-if="!store.loaded" class="d-flex flex-column ga-3 px-1">
         <div v-for="i in 3" :key="i" class="skeleton-card">
           <div class="skeleton-row" style="width:65%" />
