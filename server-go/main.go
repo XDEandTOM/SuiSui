@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -41,42 +40,12 @@ var githubToken = ""
 var sseClients = make(map[chan string]bool)
 var sseMu sync.Mutex
 
-// Live chat
+// Live
+var liveStreamURL = ""
 var liveChat []string
 var liveChatMu sync.Mutex
 var liveSSEClients = make(map[chan string]bool)
 var liveSSEMu sync.Mutex
-
-// Live push status
-var liveOnline bool
-var liveOnlineMu sync.Mutex
-
-// mediamtx process
-var mediamtxCmd *exec.Cmd
-
-func startMediaMTX() {
-	path := os.Getenv("MEDIAMTX_PATH")
-	if path == "" { return }
-	// Create config
-	cfg := `rtmp: yes
-hls: yes
-hlsDirectory: /data/hls
-paths:
-  stream:
-    source: publisher
-`
-	cfgPath := filepath.Join(dataDir, "mediamtx.yml")
-	os.WriteFile(cfgPath, []byte(cfg), 0644)
-
-	mediamtxCmd = exec.Command(path, cfgPath)
-	mediamtxCmd.Stdout = os.Stdout
-	mediamtxCmd.Stderr = os.Stderr
-	if err := mediamtxCmd.Start(); err != nil {
-		log.Printf("mediamtx start failed: %v", err)
-		return
-	}
-	log.Printf("MediaMTX started (pid %d)", mediamtxCmd.Process.Pid)
-}
 
 func liveChatHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
@@ -124,12 +93,9 @@ func liveChatHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func liveStatusHandler(w http.ResponseWriter, r *http.Request) {
-	// Check if HLS playlist exists
-	online := false
-	if _, err := os.Stat(filepath.Join(dataDir, "hls", "stream.m3u8")); err == nil {
-		online = true
-	}
-	jsonResp(w, map[string]bool{"online": online})
+	var url string
+	db.QueryRow("SELECT value FROM settings WHERE key='live_stream_url'").Scan(&url)
+	jsonResp(w, map[string]bool{"online": url != ""})
 }
 
 func sseBroadcast(event string, data string) {
@@ -233,15 +199,12 @@ func main() {
 	serverCertFile = certFile
 	serverKeyFile = keyFile
 
-	// Start mediamtx for live streaming (if binary exists)
-	startMediaMTX()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", handleAPI)
 	mux.HandleFunc("/uploads/", handleUploads)
 	mux.HandleFunc("/health", handleHealth)
 	mux.HandleFunc("/live/", handleLive)
-	mux.HandleFunc("/hls/", handleHLS)
 	mux.HandleFunc("/", handleStatic)
 
 	handler := loggingMiddleware(compressMiddleware(mux))
@@ -441,6 +404,10 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 		sseHandler(w, r)
 	case strings.HasPrefix(path, "/live/chat"):
 		liveChatHandler(w, r)
+	case strings.HasPrefix(path, "/live/config"):
+		var url string
+		db.QueryRow("SELECT value FROM settings WHERE key='live_stream_url'").Scan(&url)
+		jsonResp(w, map[string]string{"streamUrl": url})
 	case strings.HasPrefix(path, "/live/status"):
 		liveStatusHandler(w, r)
 	case path == "/admin/config":
@@ -503,16 +470,7 @@ func handleLive(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(livePage))
 }
 
-func handleHLS(w http.ResponseWriter, r *http.Request) {
-	// Serve HLS segments (m3u8, ts) from /data/hls
-	path := filepath.Join(dataDir, "hls", strings.TrimPrefix(r.URL.Path, "/hls/"))
-	// Security: ensure path is within hls directory
-	if !strings.HasPrefix(filepath.Clean(path), filepath.Clean(filepath.Join(dataDir, "hls"))) {
-		errResp(w, "forbidden", 403); return
-	}
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	http.ServeFile(w, r, path)
-}
+
 
 func handleStatic(w http.ResponseWriter, r *http.Request) {
 	securityHeaders(w)

@@ -20,7 +20,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer rows.Close()
-		s := map[string]string{"site_title": "", "allow_register": "true", "site_favicon": "", "site_icp": ""}
+		s := map[string]string{"site_title": "", "allow_register": "true", "site_favicon": "", "site_icp": "", "live_stream_url": ""}
 		for rows.Next() {
 			var k, v string
 			if err := rows.Scan(&k, &v); err != nil {
