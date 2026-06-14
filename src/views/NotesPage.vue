@@ -464,6 +464,19 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
   background: rgba(var(--v-theme-on-surface), 0.08);
   flex-shrink: 0;
 }
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 56px 16px; gap: 12px;
+}
+.empty-illust { position: relative; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+.empty-illust-inner { position: relative; display: flex; align-items: center; justify-content: center; }
+.empty-icon-main { opacity: 0.15; }
+.notes-empty .empty-icon-main { opacity: 0.12; }
+.empty-icon-sub { position: absolute; bottom: -4px; right: -12px; }
+.empty-icon-sparkle { position: absolute; top: -6px; right: -4px; opacity: 0.4; }
+.sparkle-2 { top: -2px; right: -20px; opacity: 0.3; }
+.empty-text-title { font-size: 1rem; font-weight: 600; margin: 0; text-align: center; }
+.empty-text-hint { font-size: 0.82rem; color: rgba(var(--v-theme-on-surface), 0.45); margin: 0; text-align: center; }
 .date-filter-bar {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 14px;

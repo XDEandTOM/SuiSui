@@ -3,6 +3,7 @@ import { ref } from "vue"
 import { useTheme } from "vuetify"
 
 const THEME_PRESET_KEY = "suisui-theme-preset"
+const THEME_KEY = "suisui-theme"
 
 interface Preset { name: string; emoji: string; light: Record<string, string>; dark: Record<string, string> }
 const presets: Record<string, Preset> = {
@@ -20,6 +21,7 @@ const presets: Record<string, Preset> = {
 const visible = defineModel<boolean>("modelValue", { required: true })
 const vuetify = useTheme()
 const current = ref(localStorage.getItem(THEME_PRESET_KEY) || "default")
+const isDark = ref(vuetify.global.name.value === "dark")
 
 function pick(id: string) {
   const p = presets[id]
@@ -29,6 +31,14 @@ function pick(id: string) {
   const theme = vuetify.global.name.value as "light" | "dark"
   Object.assign(vuetify.themes.value[theme].colors, p[theme])
   visible.value = false
+}
+
+function toggleDark() {
+  const theme = isDark.value ? "dark" : "light"
+  vuetify.global.name.value = theme
+  localStorage.setItem(THEME_KEY, theme)
+  const p = presets[current.value]
+  if (p) Object.assign(vuetify.themes.value[theme].colors, p[theme])
 }
 </script>
 
@@ -50,6 +60,14 @@ function pick(id: string) {
           <span class="theme-name">{{ p.name }}</span>
         </div>
       </div>
+      <v-divider class="my-3" />
+      <div class="d-flex align-center justify-space-between px-1">
+        <span class="text-body-2">外观</span>
+        <div class="mode-toggle">
+          <button class="mode-btn" :class="{ active: !isDark }" @click="isDark = false; toggleDark()">☀️ 浅色</button>
+          <button class="mode-btn" :class="{ active: isDark }" @click="isDark = true; toggleDark()">🌙 深色</button>
+        </div>
+      </div>
     </v-card>
   </v-dialog>
 </template>
@@ -69,4 +87,7 @@ function pick(id: string) {
 }
 .theme-emoji { font-size: 1.1rem; }
 .theme-name { font-size: 0.72rem; font-weight: 500; }
+.mode-toggle { display: flex; background: rgba(128,128,128,0.08); border-radius: 8px; padding: 2px; }
+.mode-btn { border: none; background: transparent; padding: 4px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; transition: all 0.15s; color: rgba(var(--v-theme-on-surface), 0.5); }
+.mode-btn.active { background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface)); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 </style>

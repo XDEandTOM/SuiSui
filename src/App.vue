@@ -9,7 +9,6 @@ import LoginDialog from "@/components/LoginDialog.vue"
 import AppLogo from "@/components/AppLogo.vue"
 import ShareView from "@/components/ShareView.vue"
 import ThemePicker from "@/components/ThemePicker.vue"
-import BookmarkletDialog from "@/components/BookmarkletDialog.vue"
 
 const isShareView = computed(() => window.location.pathname.startsWith("/share/"))
 
@@ -21,7 +20,6 @@ const showAdmin = ref(false)
 const showLogin = ref(false)
 const showProfile = ref(false)
 const showThemePicker = ref(false)
-const showBookmarklet = ref(false)
 const showMobileHeatmap = ref(false)
 const nickEdit = ref("")
 const savingNick = ref(false)
@@ -57,10 +55,7 @@ async function loadSiteTitle() {
   } catch { console.warn("failed silently") }
 }
 
-function toggleTheme() {
-  const next = vuetifyTheme.global.name.value === "dark" ? "light" : "dark"
-  vuetifyTheme.change(next)
-}
+function goLive() { window.open("/live/", "_self") }
 
 function saveNickname() {
   const n = nickEdit.value.trim()
@@ -126,8 +121,7 @@ function isImage(val?: string) { return val?.startsWith("/uploads/") || val?.sta
       <div class="sidebar-middle" />
       <div class="sidebar-bottom">
         <v-btn icon="mdi-palette-outline" variant="text" size="small" class="sidebar-btn" title="主题配色" @click.stop="showThemePicker = true" />
-        <v-btn icon="mdi-bookmark-plus-outline" variant="text" size="small" class="sidebar-btn" title="网页剪藏" @click.stop="showBookmarklet = true" />
-        <v-btn icon="mdi-theme-light-dark" variant="text" size="small" class="sidebar-btn" title="切换亮暗" @click.stop="toggleTheme" />
+        <v-btn icon="mdi-video-outline" variant="text" size="small" class="sidebar-btn" title="直播" @click.stop="goLive()" />
         <template v-if="auth.ready && auth.isLoggedIn">
           <v-btn icon="mdi-cog-outline" variant="text" size="small" class="sidebar-btn"
             :color="showAdmin ? 'primary' : undefined"
@@ -155,7 +149,7 @@ function isImage(val?: string) { return val?.startsWith("/uploads/") || val?.sta
         </template>
         <v-spacer />
         <v-btn icon="mdi-palette-outline" variant="text" size="small" class="mobile-bar-btn" @click.stop="showThemePicker = true" />
-        <v-btn icon="mdi-theme-light-dark" variant="text" size="small" class="mobile-bar-btn" @click.stop="toggleTheme" />
+        <v-btn icon="mdi-video-outline" variant="text" size="small" class="mobile-bar-btn" @click.stop="goLive()" />
         <v-btn icon="mdi-fire" variant="text" size="small" class="mobile-bar-btn"
           :color="showMobileHeatmap ? 'primary' : undefined"
           @click.stop="showMobileHeatmap = !showMobileHeatmap" />
@@ -179,8 +173,7 @@ function isImage(val?: string) { return val?.startsWith("/uploads/") || val?.sta
     </v-main>
     <LoginDialog v-model="showLogin" />
     <ThemePicker v-model="showThemePicker" />
-    <BookmarkletDialog v-model="showBookmarklet" />
-    <v-dialog v-model="showProfile" max-width="420" transition="scale-transition">
+        <v-dialog v-model="showProfile" max-width="420" transition="scale-transition">
       <v-card class="rounded-xl pa-4">
         <div class="d-flex align-center mb-3">
           <span class="text-subtitle-2 font-weight-medium">个人资料</span>

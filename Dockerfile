@@ -21,7 +21,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=builder /build/suisui .
 
-EXPOSE 3742 80 443
+EXPOSE 3742
 
 VOLUME ["/data"]
 

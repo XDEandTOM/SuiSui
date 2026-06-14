@@ -213,44 +213,7 @@ func handleAdmin(w http.ResponseWriter, r *http.Request, path string) {
 			os.Exit(0)
 		}()
 
-	case path == "/admin/config/brotli" && r.Method == "GET":
-		jsonResp(w, map[string]bool{"enabled": brotliEnabled})
 
-	case path == "/admin/config/brotli" && r.Method == "POST":
-		tokenUser, tokenValid := verifyToken(r)
-		if !tokenValid { errResp(w, "unauthorized", 401); return }
-		var callerRole string
-		db.QueryRow("SELECT role FROM users WHERE username=?", tokenUser).Scan(&callerRole)
-		if callerRole != "admin" { errResp(w, "forbidden", 403); return }
-		var body struct{ Enabled bool }
-		if json.NewDecoder(r.Body).Decode(&body) != nil { errResp(w, "invalid request", 400); return }
-		brotliEnabled = body.Enabled
-		jsonResp(w, successResponse{Success: "ok"})
-
-	case path == "/admin/config/github-token" && r.Method == "GET":
-		jsonResp(w, map[string]bool{"configured": githubToken != ""})
-
-	case path == "/admin/config/github-token" && r.Method == "POST":
-		tokenUser, tokenValid := verifyToken(r)
-		if !tokenValid { errResp(w, "unauthorized", 401); return }
-		var callerRole string
-		db.QueryRow("SELECT role FROM users WHERE username=?", tokenUser).Scan(&callerRole)
-		if callerRole != "admin" { errResp(w, "forbidden", 403); return }
-		var body struct{ Token string }
-		if json.NewDecoder(r.Body).Decode(&body) != nil { errResp(w, "invalid request", 400); return }
-		githubToken = body.Token
-		// Save to server.json
-		cfgPath := filepath.Join(dataDir, "server.json")
-		if cfgData, err := os.ReadFile(cfgPath); err == nil {
-			var cfg map[string]interface{}
-			json.Unmarshal(cfgData, &cfg)
-			if cfg == nil { cfg = map[string]interface{}{} }
-			cfg["github_token"] = body.Token
-			if newData, err := json.Marshal(cfg); err == nil {
-				os.WriteFile(cfgPath, newData, 0644)
-			}
-		}
-		jsonResp(w, successResponse{Success: "ok"})
 
 	default:
 		parts := strings.Split(strings.TrimPrefix(path, "/admin/users/"), "/")

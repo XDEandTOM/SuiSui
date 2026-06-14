@@ -1,159 +1,37 @@
 package main
 
 import (
-	"bufio"
-	"compress/gzip"
-	"embed"
-	"encoding/json"
-	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
-	"github.com/andybalholm/brotli"
 	_ "modernc.org/sqlite"
 )
-
-//go:embed dist/*
-var staticFiles embed.FS
-
-//go:embed live.html
-var livePage string
 
 // Version is set at build time via -ldflags, fallback to "dev" in local builds.
 var Version = "dev"
 var serverPort = "3742"
-var serverCertFile = ""
-var serverKeyFile = ""
-var brotliEnabled = true
 var githubToken = ""
 
-// SSE event hub
-var sseClients = make(map[chan string]bool)
-var sseMu sync.Mutex
 
-// Live
-var liveStreamURL = ""
-var liveChat []string
-var liveChatMu sync.Mutex
-var liveSSEClients = make(map[chan string]bool)
-var liveSSEMu sync.Mutex
 
-func liveChatHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		var msg struct { Text string `json:"text"`; Author string `json:"author"` }
-		if json.NewDecoder(r.Body).Decode(&msg) != nil || msg.Text == "" { errResp(w, "bad request", 400); return }
-		payload := msg.Author + ": " + msg.Text
-		liveChatMu.Lock()
-		liveChat = append(liveChat, payload)
-		if len(liveChat) > 100 { liveChat = liveChat[len(liveChat)-100:] }
-		liveChatMu.Unlock()
-		// Broadcast via SSE
-		data, _ := json.Marshal(map[string]string{"text": msg.Text, "author": msg.Author})
-		liveSSEMu.Lock()
-		for ch := range liveSSEClients {
-			select { case ch <- string(data): default: close(ch); delete(liveSSEClients, ch) }
-		}
-		liveSSEMu.Unlock()
-		jsonResp(w, map[string]bool{"ok": true})
-		return
-	}
-	// SSE stream
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	flusher, _ := w.(http.Flusher)
-	// Send chat history
-	liveChatMu.Lock()
-	for _, m := range liveChat { fmt.Fprintf(w, "data: %s\n\n", m) }
-	liveChatMu.Unlock()
-	if flusher != nil { flusher.Flush() }
 
-	ch := make(chan string, 10)
-	liveSSEMu.Lock()
-	liveSSEClients[ch] = true
-	liveSSEMu.Unlock()
 
-	notify := r.Context().Done()
-	go func() {
-		<-notify
-		liveSSEMu.Lock()
-		delete(liveSSEClients, ch); close(ch)
-		liveSSEMu.Unlock()
-	}()
-	for msg := range ch { fmt.Fprintf(w, "data: %s\n\n", msg); flusher.Flush() }
-}
 
-func liveStatusHandler(w http.ResponseWriter, r *http.Request) {
-	var url string
-	db.QueryRow("SELECT value FROM settings WHERE key='live_stream_url'").Scan(&url)
-	jsonResp(w, map[string]bool{"online": url != ""})
-}
 
-func sseBroadcast(event string, data string) {
-	sseMu.Lock()
-	defer sseMu.Unlock()
-	msg := fmt.Sprintf("event: %s\ndata: %s\n\n", event, data)
-	for ch := range sseClients {
-		select {
-		case ch <- msg:
-		default:
-			close(ch)
-			delete(sseClients, ch)
-		}
-	}
-}
 
-func sseHandler(w http.ResponseWriter, r *http.Request) {
-	// Remove server-level WriteTimeout for SSE (long-lived connection)
-	rc := http.NewResponseController(w)
-	rc.SetWriteDeadline(time.Time{})
-
-	flusher, ok := w.(http.Flusher)
-	if !ok { errResp(w, "streaming not supported", 500); return }
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	// Send initial keepalive to confirm connection
-	fmt.Fprintf(w, ":ok\n\n")
-	flusher.Flush()
-
-	ch := make(chan string, 3)
-	sseMu.Lock()
-	sseClients[ch] = true
-	sseMu.Unlock()
-
-	notify := r.Context().Done()
-	go func() {
-		<-notify
-		sseMu.Lock()
-		delete(sseClients, ch)
-		close(ch)
-		sseMu.Unlock()
-	}()
-
-	for msg := range ch {
-		fmt.Fprint(w, msg)
-		flusher.Flush()
-	}
-}
 
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3742"
 	}
-	certFile := ""
-	keyFile := ""
 	dataDir = "."
 
 	for i := 1; i < len(os.Args); i++ {
@@ -162,42 +40,13 @@ func main() {
 			if i+1 < len(os.Args) { port = os.Args[i+1]; i++ }
 		case "-data":
 			if i+1 < len(os.Args) { dataDir = os.Args[i+1]; i++ }
-		case "-cert":
-			if i+1 < len(os.Args) { certFile = os.Args[i+1]; i++ }
-		case "-key":
-			if i+1 < len(os.Args) { keyFile = os.Args[i+1]; i++ }
 		}
 	}
 
 	initDB()
 	initAdmin()
 
-	// Read server config from data directory (if exists)
-	if certFile == "" && keyFile == "" {
-		cfgPath := filepath.Join(dataDir, "server.json")
-		if cfgData, err := os.ReadFile(cfgPath); err == nil {
-			var cfg struct {
-				Cert string `json:"cert"`
-				Key  string `json:"key"`
-				GitHubToken string `json:"github_token,omitempty"`
-			}
-			if json.Unmarshal(cfgData, &cfg) == nil {
-				githubToken = cfg.GitHubToken
-				if cfg.Cert != "" && cfg.Key != "" {
-					certPath := filepath.Join(dataDir, cfg.Cert)
-					keyPath := filepath.Join(dataDir, cfg.Key)
-					if _, err := os.Stat(certPath); err == nil {
-						certFile = certPath
-						keyFile = keyPath
-					}
-				}
-			}
-		}
-	}
-
 	serverPort = port
-	serverCertFile = certFile
-	serverKeyFile = keyFile
 
 
 	mux := http.NewServeMux()
@@ -207,60 +56,20 @@ func main() {
 	mux.HandleFunc("/live/", handleLive)
 	mux.HandleFunc("/", handleStatic)
 
-	handler := loggingMiddleware(compressMiddleware(mux))
-
-	// TLS mode — cert and key provided
-	if certFile != "" && keyFile != "" {
-		// HTTP→HTTPS redirect server on :80
-		go func() {
-			redirMux := http.NewServeMux()
-			redirMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusMovedPermanently)
-			})
-			redirSrv := &http.Server{
-				Addr:    ":80",
-				Handler: loggingMiddleware(redirMux),
-				ReadTimeout: 10 * time.Second,
-				WriteTimeout: 10 * time.Second,
-				IdleTimeout: 30 * time.Second,
-			}
-			log.Printf("Redirect HTTP :80 → HTTPS")
-			if err := redirSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("redirect server: %v", err)
-			}
-		}()
-
-		srv := &http.Server{
-			Addr:         ":" + port,
-			Handler:      handler,
-			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 30 * time.Second,
-			IdleTimeout:  60 * time.Second,
-		}
-
-		go func() {
-			log.Printf("Server %s on :%s (TLS, data: %s)", Version, port, dataDir)
-			if err := srv.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("listen TLS: %v", err)
-			}
-		}()
-	} else {
-		// Plain HTTP mode (no TLS)
-		srv := &http.Server{
-			Addr:         ":" + port,
-			Handler:      handler,
-			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 30 * time.Second,
-			IdleTimeout:  60 * time.Second,
-		}
-
-		go func() {
-			log.Printf("Server %s on :%s (data: %s)", Version, port, dataDir)
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("listen: %v", err)
-			}
-		}()
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      loggingMiddleware(mux),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	go func() {
+		log.Printf("Server %s on :%s (data: %s)", Version, port, dataDir)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %v", err)
+		}
+	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -268,102 +77,15 @@ func main() {
 	log.Println("Shutting down server...")
 }
 
-// compressMiddleware wraps responses with Brotli (preferred) or Gzip compression.
-func compressMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Don't compress already-compressed content (e.g. uploaded images, woff2)
-		// or Server-Sent Events
-		if strings.Contains(r.Header.Get("Accept"), "text/event-stream") {
-			next.ServeHTTP(w, r)
-			return
-		}
 
-		ae := r.Header.Get("Accept-Encoding")
-		if brotliEnabled && strings.Contains(ae, "br") {
-			w.Header().Set("Content-Encoding", "br")
-			w.Header().Set("Vary", "Accept-Encoding")
-			bw := brotli.NewWriterLevel(w, brotli.DefaultCompression)
-			defer bw.Close()
-			next.ServeHTTP(&compressWriter{ResponseWriter: w, writer: bw}, r)
-		} else if strings.Contains(ae, "gzip") {
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Vary", "Accept-Encoding")
-			gw, _ := gzip.NewWriterLevel(w, gzip.BestSpeed)
-			defer gw.Close()
-			next.ServeHTTP(&compressWriter{ResponseWriter: w, writer: gw}, r)
-		} else {
-			next.ServeHTTP(w, r)
-		}
-	})
-}
 
-type compressWriter struct {
-	http.ResponseWriter
-	writer   io.Writer
-	status   int
-	headerWritten bool
-}
 
-func (c *compressWriter) Write(b []byte) (int, error) {
-	if !c.headerWritten {
-		if c.status != 0 {
-			c.ResponseWriter.WriteHeader(c.status)
-		}
-		c.headerWritten = true
-	}
-	return c.writer.Write(b)
-}
 
-func (c *compressWriter) WriteHeader(status int) {
-	if c.headerWritten { return }
-	c.status = status
-}
 
-func (c *compressWriter) Flush() {
-	if f, ok := c.writer.(interface{ Flush() }); ok {
-		f.Flush()
-	}
-}
 
-// loggingMiddleware logs each request with method, path, status and duration.
-func loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		sw := &statusWriter{ResponseWriter: w, status: 200}
-		next.ServeHTTP(sw, r)
-		duration := time.Since(start)
-		if r.URL.Path != "/favicon.ico" {
-			log.Printf("%s %s %d %s", r.Method, r.URL.Path, sw.status, duration)
-		}
-	})
-}
 
-type statusWriter struct {
-	http.ResponseWriter
-	status int
-	written bool
-}
 
-func (w *statusWriter) WriteHeader(status int) {
-	if !w.written {
-		w.status = status
-		w.written = true
-		w.ResponseWriter.WriteHeader(status)
-	}
-}
 
-func (w *statusWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	if h, ok := w.ResponseWriter.(http.Hijacker); ok {
-		return h.Hijack()
-	}
-	return nil, nil, http.ErrNotSupported
-}
-
-func (w *statusWriter) Flush() {
-	if f, ok := w.ResponseWriter.(http.Flusher); ok {
-		f.Flush()
-	}
-}
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	var dbVer int
@@ -410,11 +132,16 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 		jsonResp(w, map[string]string{"streamUrl": url})
 	case strings.HasPrefix(path, "/live/status"):
 		liveStatusHandler(w, r)
+	case strings.HasPrefix(path, "/live/dm"):
+		if r.Method == "GET" {
+			jsonResp(w, map[string]interface{}{"code": 0, "data": []interface{}{}})
+		} else {
+			jsonResp(w, map[string]interface{}{"code": 0})
+		}
 	case path == "/admin/config":
 		jsonResp(w, map[string]interface{}{
 			"version": Version,
 			"port":    serverPort,
-			"tls":     serverCertFile != "" && serverKeyFile != "",
 			"dataDir": dataDir,
 		})
 	case strings.HasPrefix(path, "/admin/"):
@@ -462,42 +189,4 @@ func handleGitHubProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-}
-
-func handleLive(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Write([]byte(livePage))
-}
-
-
-
-func handleStatic(w http.ResponseWriter, r *http.Request) {
-	securityHeaders(w)
-	if r.URL.Path == "/" {
-		data, err := staticFiles.ReadFile("dist/index.html")
-		if err != nil { w.WriteHeader(500); return }
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-cache, must-revalidate")
-		w.Write(data); return
-	}
-	data, err := staticFiles.ReadFile("dist" + r.URL.Path)
-	if err != nil {
-		data, err = staticFiles.ReadFile("dist/index.html")
-		if err != nil { w.WriteHeader(500); return }
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-cache, must-revalidate")
-		w.Write(data); return
-	}
-	ext := filepath.Ext(r.URL.Path)
-	mime := map[string]string{".js": "application/javascript", ".css": "text/css",
-		".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml",
-		".woff": "font/woff", ".woff2": "font/woff2", ".ico": "image/x-icon"}
-	if m, ok := mime[ext]; ok { w.Header().Set("Content-Type", m) }
-	if ext == ".js" || ext == ".css" || ext == ".woff2" || ext == ".woff" || ext == ".ttf" ||
-		ext == ".eot" || ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" ||
-		ext == ".webp" || ext == ".ico" || ext == ".svg" {
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	}
-	w.Write(data)
 }

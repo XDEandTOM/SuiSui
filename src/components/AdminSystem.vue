@@ -21,6 +21,9 @@ const serverConfig = ref({ version: "", port: "", tls: false, dataDir: "" })
 const siteDomain = ref("")
 const domainInput = ref("")
 const showDomainDialog = ref(false)
+const liveStreamUrl = ref("")
+const liveInput = ref("")
+const showLiveDialog = ref(false)
 const certText = ref("")
 const keyText = ref("")
 const savingSSL = ref(false)
@@ -105,6 +108,7 @@ async function loadSettings() {
       siteTitle.value = s.site_title || ""
       siteIcp.value = s.site_icp || ""
       siteDomain.value = s.site_domain || ""
+      liveStreamUrl.value = s.live_stream_url || ""
       document.title = s.site_title || "碎碎"
       allowRegister.value = s.allow_register !== "false"
     }
@@ -143,6 +147,16 @@ async function saveDomain() {
     siteDomain.value = domainInput.value.trim()
     snackMsg.value = "域名已保存"; snackbar.value = true; showDomainDialog.value = false
   } catch { console.warn("saveDomain failed") }
+}
+async function saveLiveUrl() {
+  try {
+    await authFetch(API + "/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "live_stream_url", value: liveInput.value.trim() })
+    })
+    liveStreamUrl.value = liveInput.value.trim()
+    snackMsg.value = "直播流地址已保存"; snackbar.value = true; showLiveDialog.value = false
+  } catch { console.warn("saveLiveUrl failed") }
 }
 async function toggleRegister(val: boolean) {
   try {
@@ -202,6 +216,17 @@ loadGitHubTokenStatus()
           <div class="d-flex align-center ga-2">
             <span class="text-body-2 text-medium-emphasis text-caption">{{ siteDomain || "未设置" }}</span>
             <v-btn size="small" variant="tonal" color="primary" @click="openDomainDialog">修改</v-btn>
+          </div>
+        </div>
+        <v-divider />
+        <div class="d-flex align-center justify-space-between">
+          <div class="d-flex align-center ga-3">
+            <v-icon color="primary">mdi-video</v-icon>
+            <span class="text-body-2">直播流地址</span>
+          </div>
+          <div class="d-flex align-center ga-2">
+            <span class="text-body-2 text-medium-emphasis text-caption" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ liveStreamUrl || "未设置" }}</span>
+            <v-btn size="small" variant="tonal" color="primary" @click="liveInput = liveStreamUrl; showLiveDialog = true">修改</v-btn>
           </div>
         </div>
         <v-divider />
@@ -302,6 +327,20 @@ loadGitHubTokenStatus()
           <v-spacer />
           <v-btn variant="text" @click="showDomainDialog = false">取消</v-btn>
           <v-btn variant="tonal" color="primary" @click="saveDomain">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <!-- Live Stream URL Dialog -->
+    <v-dialog v-model="showLiveDialog" max-width="400">
+      <v-card class="rounded-xl pa-4">
+        <v-card-title class="text-subtitle-1 font-weight-medium px-0">配置直播流地址</v-card-title>
+        <v-card-text class="px-0">
+          <v-text-field v-model="liveInput" variant="outlined" hide-details density="compact" placeholder="https://example.com/live/stream.m3u8" autofocus @keyup.enter="saveLiveUrl" />
+        </v-card-text>
+        <v-card-actions class="px-0">
+          <v-spacer />
+          <v-btn variant="text" @click="showLiveDialog = false">取消</v-btn>
+          <v-btn variant="tonal" color="primary" @click="saveLiveUrl">保存</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
