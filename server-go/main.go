@@ -52,6 +52,10 @@ func sseBroadcast(event string, data string) {
 }
 
 func sseHandler(w http.ResponseWriter, r *http.Request) {
+	// Remove server-level WriteTimeout for SSE (long-lived connection)
+	rc := http.NewResponseController(w)
+	rc.SetWriteDeadline(time.Time{})
+
 	flusher, ok := w.(http.Flusher)
 	if !ok { errResp(w, "streaming not supported", 500); return }
 	w.Header().Set("Content-Type", "text/event-stream")
