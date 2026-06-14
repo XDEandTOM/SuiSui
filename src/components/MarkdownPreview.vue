@@ -1,43 +1,16 @@
-﻿<script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue"
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted } from "vue"
 import { marked } from "marked"
-import hljs from "highlight.js/lib/core"
-import "highlight.js/lib/languages/javascript"
-import "highlight.js/lib/languages/typescript"
-import "highlight.js/lib/languages/python"
-import "highlight.js/lib/languages/go"
-import "highlight.js/lib/languages/bash"
-import "highlight.js/lib/languages/json"
-import "highlight.js/lib/languages/xml"
-import "highlight.js/lib/languages/css"
-import "highlight.js/lib/languages/sql"
-import "highlight.js/lib/languages/yaml"
-import "highlight.js/lib/languages/dockerfile"
-import "highlight.js/lib/languages/markdown"
 
 
 const renderer = new marked.Renderer()
 let todoIndex = 0
-renderer.code = ({ text, lang }) => {
-  let code: string
-  try {
-    if (lang && hljs.getLanguage(lang)) code = hljs.highlight(text, { language: lang }).value
-    else code = hljs.highlightAuto(text).value
-  } catch { code = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") }
-  if (!code) code = text;                                               // apply inline styles
-    code = code.replace(/hljs-keyword/g,'hljs-keyword" style="color:#ff7b72;font-weight:600')
-      .replace(/hljs-string"/g,'hljs-string" style="color:#a5d6ff')
-      .replace(/hljs-number"/g,'hljs-number" style="color:#79c0ff')
-      .replace(/hljs-built_in"/g,'hljs-built_in" style="color:#ffa657')
-      .replace(/hljs-title"/g,'hljs-title" style="color:#d2a8ff')
-      .replace(/hljs-comment"/g,'hljs-comment" style="color:#8b949e;font-style:italic')
-      .replace(/hljs-literal"/g,'hljs-literal" style="color:#79c0ff')
-      .replace(/hljs-attr"/g,'hljs-attr" style="color:#79c0ff')
+renderer.code = ({ text, lang: _lang }) => {
+  const escaped = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
   const encoded = encodeURIComponent(text)
-  const lines = text.split("\n").length
   return `<div class="code-block">
-    <div class="code-block-header"><span class="code-block-lang">${lang || "code"}</span><button class="code-copy-btn" data-code="${encoded}" title="复制代码"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
-    <div class="code-block-body"><div class="code-block-lines">${Array.from({length: lines}, (_, i) => `<span>${i + 1}</span>`).join("")}</div><pre><code>${code}</code></pre></div>
+    <pre><code>${escaped}</code></pre>
+    <button class="code-copy-btn" data-code="${encoded}" title="复制代码"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
   </div>`
 }
 renderer.listitem = ({ text, task, checked }) => {
@@ -53,7 +26,42 @@ marked.setOptions({ breaks: true, gfm: true })
 
 const emit = defineEmits<{ "todo-toggle": [idx: number] }>()
 const props = defineProps<{ content: string; searchQuery?: string }>()
-const zoomedImage = ref("")
+
+/* ── 图片放大 ── */
+const zoomIdx = ref(-1)
+const zoomImgs = computed(() => {
+  const r: string[] = []
+  const re = /!\[.*?\]\((.*?)\)|<img[^>]+src="([^"]+)"/g; let m
+  while ((m = re.exec(props.content)) !== null) r.push(m[1] || m[2])
+  return r
+})
+const zoomUrl = ref("")
+
+function zoomOpen(img: HTMLImageElement) {
+  zoomIdx.value = zoomImgs.value.findIndex(u => img.src.endsWith(u))
+  if (zoomIdx.value < 0) zoomIdx.value = 0
+  zoomUrl.value = img.src
+}
+
+function zoomSwitch(d: number) {
+  const imgs = zoomImgs.value
+  if (imgs.length < 2) return
+  zoomIdx.value = (zoomIdx.value + d + imgs.length) % imgs.length
+  zoomUrl.value = imgs[zoomIdx.value]
+}
+
+function zoomClose() { zoomUrl.value = '' }
+
+function onZoomKey(e: KeyboardEvent) {
+  if (!zoomUrl.value) return
+  if (e.key === 'ArrowLeft') zoomSwitch(-1)
+  else if (e.key === 'ArrowRight') zoomSwitch(1)
+  else if (e.key === 'Escape') zoomClose()
+}
+onMounted(() => document.addEventListener('keydown', onZoomKey))
+onUnmounted(() => document.removeEventListener('keydown', onZoomKey))
+
+
 const expandedGrids = ref<Set<string>>(new Set())
 const loadedRepos = ref<Set<string>>(new Set())
 const githubRepos = ref<Record<string, { name: string; fullName: string; description: string; stars: number; language: string; license: string; url: string }>>({})
@@ -80,7 +88,7 @@ async function fetchGitHubRepos() {
         license: d.license?.spdx_id || "", url: d.html_url,
       }}
       loadedRepos.value = new Set(loadedRepos.value).add(fullName)
-    } catch { console.warn("failed silently") }
+    } catch (e) { console.warn("fetch repo failed", e) }
   }
 }
 
@@ -114,7 +122,7 @@ function highlightText(text: string, query: string): string {
 const rendered = computed(() => {
   todoIndex = 0
   // Ensure reactivity when repos are loaded or grids expanded
-  void loadedRepos.value.has(""); void expandedGrids.value.has("");
+  void loadedRepos.value.size; void expandedGrids.value.size;
   try {
     // Strip loaded GitHub URLs from content
     let content = props.content
@@ -154,7 +162,7 @@ function handleClick(e: MouseEvent) {
     return
   }
   const img = target.closest("img") as HTMLImageElement
-  if (img) { zoomedImage.value = img.src; return }
+  if (img) { zoomOpen(img); return }
   // Expand collapsed image grid
   const cell = target.closest(".img-grid-overflow") as HTMLElement
   if (cell) {
@@ -208,76 +216,72 @@ function handleClick(e: MouseEvent) {
     </a>
   </div>
   <teleport to="body">
-    <div v-if="zoomedImage" class="zoom-overlay" @click="zoomedImage = ''">
-      <button class="zoom-close-btn" @click.stop="zoomedImage = ''">
+    <div v-if="zoomUrl" class="zoom-overlay" @click="zoomClose">
+      <button class="zoom-close-btn" @click.stop="zoomClose">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
       </button>
-      <img :src="zoomedImage" class="zoom-img" @click.stop />
+    </div>
+    <div v-if="zoomUrl" class="zoom-img-wrap">
+      <img :key="zoomUrl" :src="zoomUrl" class="zoom-img" @click="zoomClose" />
+      <div v-if="zoomImgs.length > 1" class="zoom-thumb-strip">
+        <div v-for="(u, i) in zoomImgs" :key="i" class="zoom-thumb" :class="{ active: i === zoomIdx }" @click.stop="zoomIdx = i; zoomUrl = u">
+          <img :src="u" />
+        </div>
+      </div>
     </div>
   </teleport>
 </template>
 
-<style scoped>
+<style>
 .markdown-body { word-break: break-word; line-height: 1.6; }
-.markdown-body :deep(h1),.markdown-body :deep(h2),.markdown-body :deep(h3),
-.markdown-body :deep(h4),.markdown-body :deep(h5),.markdown-body :deep(h6) { margin: .3em 0 .15em; line-height: 1.3; }
-.markdown-body :deep(h1) { font-size: 1.4em; }
-.markdown-body :deep(h2) { font-size: 1.25em; }
-.markdown-body :deep(h3) { font-size: 1.1em; }
-.markdown-body :deep(p) { margin: .2em 0; }
-.markdown-body :deep(p:has(img)) { margin: .1em 0; }
-.markdown-body :deep(ul),.markdown-body :deep(ol) { padding-left: 1.4em; margin: .2em 0; }
-.markdown-body :deep(blockquote) { border-left: 3px solid rgba(var(--v-theme-primary),.5); padding-left: .75em; margin: .25em 0; opacity: .85; }
-.markdown-body :deep(code) { background: rgba(var(--v-theme-on-surface),.08); border-radius: 4px; padding: .15em .4em; font-size: .9em; font-family: var(--code-font); }
-.markdown-body :deep(pre) { background: rgba(var(--v-theme-on-surface),.05); border-radius: 8px; padding: .75em 1em; overflow-x: auto; margin: .5em 0; }
-.markdown-body :deep(pre code) { background: none; padding: 0; font-size: .85em; font-family: var(--code-font); }
-.markdown-body :deep(table) { border-collapse: collapse; width: 100%; margin: .5em 0; }
-.markdown-body :deep(th),.markdown-body :deep(td) { border: 1px solid rgba(var(--v-theme-on-surface),.15); padding: .4em .6em; text-align: left; }
-.markdown-body :deep(img) { max-width: 100%; max-height: 200px; border-radius: 12px; cursor: zoom-in; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.2s, box-shadow 0.2s; border: 1px solid rgba(var(--v-theme-on-surface), 0.04); object-fit: contain; background: rgba(var(--v-theme-on-surface), 0.02); }
-.markdown-body :deep(img:hover) { transform: scale(1.02); box-shadow: 0 6px 24px rgba(0,0,0,0.1); }
-.markdown-body :deep(a) { color: rgb(var(--v-theme-primary)); text-decoration: none; transition: text-decoration 0.15s, opacity 0.15s; }
-.markdown-body :deep(a:hover) { text-decoration: underline; opacity: 0.85; }
-.markdown-body :deep(.code-block) { margin: .5em 0; border-radius: 10px; overflow: hidden; border: 1px solid rgba(var(--v-theme-on-surface), 0.08); }
-.markdown-body :deep(.code-block-header) {
-  display: flex; align-items: center; padding: 6px 12px;
-  background: rgba(var(--v-theme-on-surface), 0.04);
-  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.04);
+.markdown-body h1,.markdown-body h2,.markdown-body h3,
+.markdown-body h4,.markdown-body h5,.markdown-body h6 { margin: .3em 0 .15em; line-height: 1.3; }
+.markdown-body h1 { font-size: 1.4em; }
+.markdown-body h2 { font-size: 1.25em; }
+.markdown-body h3 { font-size: 1.1em; }
+.markdown-body p { margin: .2em 0; }
+.markdown-body p:has(img) { margin: .1em 0; }
+.markdown-body ul,.markdown-body ol { padding-left: 1.4em; margin: .2em 0; }
+.markdown-body blockquote { border-left: 3px solid rgba(var(--v-theme-primary),.5); padding-left: .75em; margin: .25em 0; opacity: .85; }
+.markdown-body code { background: rgba(var(--v-theme-on-surface),.08); border-radius: 4px; padding: .15em .4em; font-size: .9em; font-family: var(--code-font); }
+.markdown-body pre { background: rgba(var(--v-theme-on-surface),.05); border-radius: 8px; padding: .75em 1em; overflow-x: auto; margin: .5em 0; }
+.markdown-body pre code { background: none; padding: 0; font-size: .85em; font-family: var(--code-font); }
+.markdown-body table { border-collapse: collapse; width: 100%; margin: .5em 0; }
+.markdown-body th,.markdown-body td { border: 1px solid rgba(var(--v-theme-on-surface),.15); padding: .4em .6em; text-align: left; }
+.markdown-body img { max-width: 100%; max-height: 200px; border-radius: 12px; cursor: zoom-in; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.2s, box-shadow 0.2s; border: 1px solid rgba(var(--v-theme-on-surface), 0.04); object-fit: contain; background: rgba(var(--v-theme-on-surface), 0.02); }
+.markdown-body img:hover { transform: scale(1.02); box-shadow: 0 6px 24px rgba(0,0,0,0.1); }
+.markdown-body a { color: rgb(var(--v-theme-primary)); text-decoration: none; transition: text-decoration 0.15s, opacity 0.15s; }
+.markdown-body a:hover { text-decoration: underline; opacity: 0.85; }
+.markdown-body .code-block { margin: .5em 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(var(--v-theme-on-surface), 0.06); position: relative; background: rgba(var(--v-theme-on-surface), 0.02); }
+.markdown-body .code-copy-btn {
+  position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 5px; border: none;
+  background: rgba(var(--v-theme-surface), 0.6); color: rgba(var(--v-theme-on-surface), 0.3);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: all 0.15s; backdrop-filter: blur(4px);
 }
-.markdown-body :deep(.code-block-lang) { font-size: 0.7rem; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; font-weight: 600; }
-.markdown-body :deep(.code-copy-btn) {
-  width: 24px; height: 24px; border-radius: 4px; border: none; background: transparent;
-  color: rgba(var(--v-theme-on-surface), 0.25); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+.markdown-body .code-block:hover .code-copy-btn { opacity: 1; }
+.markdown-body .code-copy-btn:hover { background: rgba(var(--v-theme-primary), 0.08); color: rgb(var(--v-theme-primary)); }
+.markdown-body .code-block pre {
+  margin: 0; padding: 12px 14px; background: none; border-radius: 0;
+  font-size: 0.82em; line-height: 1.5; font-family: var(--code-font); overflow-x: auto;
 }
-.markdown-body :deep(.code-copy-btn:hover) { background: rgba(var(--v-theme-on-surface), 0.06); color: rgba(var(--v-theme-on-surface), 0.6); }
-.markdown-body :deep(.code-block-body) { display: flex; background: rgba(var(--v-theme-on-surface), 0.02); }
-.markdown-body :deep(.code-block-lines) {
-  display: flex; flex-direction: column; align-items: flex-end;
-  padding: 10px 8px; user-select: none; border-right: 1px solid rgba(var(--v-theme-on-surface), 0.04);
-  font-size: 0.82em; line-height: 1.55; color: rgba(var(--v-theme-on-surface), 0.15);
-  font-family: var(--code-font); min-width: 28px;
-}
-.markdown-body :deep(.code-block-body pre) {
-  margin: 0; padding: 10px 14px; background: none; border-radius: 0;
-  font-size: 0.82em; line-height: 1.55; font-family: var(--code-font);
-}
-.markdown-body :deep(.code-block-body pre code) { padding: 0; background: none; font-size: inherit; font-family: inherit; }
-.markdown-body :deep(.carousel-wrap) { position: relative; margin: .5em 0; border-radius: 8px; overflow: hidden; background: rgba(var(--v-theme-on-surface), 0.03); }
-.markdown-body :deep(.img-grid) { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: .2em 0; }
-.markdown-body :deep(.img-grid-cell) { overflow: hidden; border-radius: 12px; aspect-ratio: 1; }
-.markdown-body :deep(.img-grid-cell img) { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; transition: transform 0.2s; border-radius: 12px; }
-.markdown-body :deep(.img-grid-cell img:hover) { transform: scale(1.03); }
-.markdown-body :deep(.img-grid-overflow) { position: relative; cursor: pointer; }
-.markdown-body :deep(.img-grid-overlay) {
+.markdown-body .code-block pre code { padding: 0; background: none; font-size: inherit; font-family: inherit; color: rgba(var(--v-theme-on-surface), 0.85); }
+.markdown-body .carousel-wrap { position: relative; margin: .5em 0; border-radius: 8px; overflow: hidden; background: rgba(var(--v-theme-on-surface), 0.03); }
+.markdown-body .img-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: .2em 0; }
+.markdown-body .img-grid-cell { overflow: hidden; border-radius: 12px; aspect-ratio: 1; }
+.markdown-body .img-grid-cell img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; transition: transform 0.2s; border-radius: 12px; }
+.markdown-body .img-grid-cell img:hover { transform: scale(1.03); }
+.markdown-body .img-grid-overflow { position: relative; cursor: pointer; }
+.markdown-body .img-grid-overlay {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   background: rgba(0,0,0,0.12);
   border-radius: 12px; transition: background 0.2s; cursor: pointer;
 }
-.markdown-body :deep(.img-grid-overlay:hover) { background: rgba(0,0,0,0.45); }
-.markdown-body :deep(.img-grid-more) { color: #fff; font-size: 1.5rem; font-weight: 700; }
-@media (max-width: 640px) { .markdown-body :deep(.img-grid) { grid-template-columns: repeat(3, 1fr); } }
+.markdown-body .img-grid-overlay:hover { background: rgba(0,0,0,0.45); }
+.markdown-body .img-grid-more { color: #fff; font-size: 1.5rem; font-weight: 700; }
+@media (max-width: 640px) { .markdown-body .img-grid { grid-template-columns: repeat(3, 1fr); } }
 
-.markdown-body :deep(mark) {
+.markdown-body mark {
   background: rgba(var(--v-theme-warning), 0.35);
   color: inherit;
   border-radius: 3px;
@@ -285,29 +289,29 @@ function handleClick(e: MouseEvent) {
 }
 
 /* Todo list styling */
-.markdown-body :deep(ul:has(.todo-item)) {
+.markdown-body ul:has(.todo-item) {
   padding-left: 0;
   list-style: none;
 }
-.markdown-body :deep(.todo-item) {
+.markdown-body .todo-item {
   list-style: none;
   margin: 2px 0;
   padding-left: 0;
 }
-.markdown-body :deep(.todo-label) {
+.markdown-body .todo-label {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
   position: relative;
 }
-.markdown-body :deep(.todo-checkbox) {
+.markdown-body .todo-checkbox {
   position: absolute;
   opacity: 0;
   width: 0;
   height: 0;
 }
-.markdown-body :deep(.todo-checkmark) {
+.markdown-body .todo-checkmark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -319,7 +323,7 @@ function handleClick(e: MouseEvent) {
   transition: all 0.15s;
   position: relative;
 }
-.markdown-body :deep(.todo-checkbox:checked + .todo-checkmark) {
+.markdown-body .todo-checkbox:checked + .todo-checkmark {
   background: rgb(var(--v-theme-primary));
   border-color: rgb(var(--v-theme-primary));
   transform: scale(0.9);
@@ -330,7 +334,7 @@ function handleClick(e: MouseEvent) {
   50% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
-.markdown-body :deep(.todo-checkbox:checked + .todo-checkmark::after) {
+.markdown-body .todo-checkbox:checked + .todo-checkmark::after {
   content: "";
   position: absolute;
   left: 4px;
@@ -341,16 +345,14 @@ function handleClick(e: MouseEvent) {
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
-.markdown-body :deep(.todo-checkbox:not(:checked) + .todo-checkmark:hover) {
+.markdown-body .todo-checkbox:not(:checked + .todo-checkmark:hover) {
   border-color: rgba(var(--v-theme-primary), 0.5);
 }
-.markdown-body :deep(.todo-text.done) {
+.markdown-body .todo-text.done {
   text-decoration: line-through;
   opacity: 0.55;
 }
-</style>
-<style>
-/* GitHub repo card */
+
 .gh-card { margin: .5em 0; }
 .gh-card-inner {
   display: flex; flex-direction: column; gap: 6px;
@@ -368,20 +370,44 @@ function handleClick(e: MouseEvent) {
 .gh-meta { display: flex; align-items: center; gap: 12px; font-size: 0.75rem; opacity: 0.5; }
 .gh-meta-item { display: flex; align-items: center; gap: 4px; }
 .gh-lang-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-<style>
 .zoom-overlay {
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,0.8);
-  display: flex; align-items: center; justify-content: center;
-  cursor: zoom-out;
+  background: rgba(0,0,0,0.85); cursor: zoom-out;
+  animation: zIn 0.2s ease;
 }
-.zoom-img { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; cursor: default; }
 .zoom-close-btn {
   position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 50%;
   border: none; background: rgba(255,255,255,0.15); color: #fff;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: background 0.2s; z-index: 10000;
+  cursor: pointer; z-index: 10003; transition: background 0.2s;
 }
 .zoom-close-btn:hover { background: rgba(255,255,255,0.3); }
+.zoom-img-wrap {
+  position: fixed; inset: 0; z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.zoom-img {
+  max-width: 90vw; max-height: 85vh; object-fit: contain;
+  border-radius: 8px; cursor: default; pointer-events: auto;
+  animation: zPop 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.zoom-thumb-strip {
+  position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+  z-index: 10002; display: flex; gap: 5px; padding: 4px 8px;
+  background: rgba(0,0,0,0.4); border-radius: 10px;
+  max-width: 75vw; overflow-x: auto; pointer-events: auto;
+  scrollbar-width: none;
+}
+.zoom-thumb-strip::-webkit-scrollbar { display: none; }
+.zoom-thumb {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 5px; overflow: hidden;
+  cursor: pointer; opacity: 0.45; transition: opacity 0.2s, transform 0.2s;
+  border: 1.5px solid transparent;
+}
+.zoom-thumb:hover { opacity: 0.75; transform: scale(1.06); }
+.zoom-thumb.active { opacity: 1; border-color: rgba(255,255,255,0.6); transform: scale(1.06); }
+.zoom-thumb img { width: 100%; height: 100%; object-fit: cover; }
+@keyframes zIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes zPop { from { transform: scale(0.92); opacity: 0 } to { transform: scale(1); opacity: 1 } }
 </style>

@@ -24,12 +24,14 @@ export const useSettingsStore = defineStore("settings", () => {
   }
 
   async function save(key: string, value: string) {
-    const r = await authFetch(API + "/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value })
-    })
-    return r.ok
+    try {
+      const r = await authFetch(API + "/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value })
+      })
+      return r.ok
+    } catch (e) { console.warn("save settings failed", e); return false }
   }
 
   function applyTitle() {

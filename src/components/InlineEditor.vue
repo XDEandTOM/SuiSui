@@ -192,7 +192,6 @@ defineExpose({ handleEdit })
           <v-btn icon="mdi-image-plus" size="small" variant="text" class="tool-btn" :loading="inlineUploading" @click="triggerInlineUpload" />
           <input ref="inlineFileInput" type="file" accept="image/*" multiple hidden @change="onInlineUpload" />
           <span class="tool-sep-sm" />
-          <v-btn icon="mdi-delete-outline" size="small" variant="text" class="tool-btn" />
         </div>
         <v-btn color="primary" size="small" variant="flat" class="rounded-pill submit-btn" @click="submitInline">
           <v-icon start>mdi-send</v-icon>{{ editingNoteId ? "更新" : "发布" }}
@@ -251,8 +250,10 @@ defineExpose({ handleEdit })
 @media (max-width: 768px) { .inline-textarea { min-height: 60px; padding: 12px 14px 8px; font-size: 0.9rem; } .editor-toolbar .tool-btn { width: 28px; height: 28px; } }
 </style>
 <style>
-.zoom-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+.zoom-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; cursor: zoom-out; animation: zoomFadeIn 0.25s ease; }
 .zoom-img { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; cursor: default; }
 .zoom-close-btn { position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; z-index: 10000; }
 .zoom-close-btn:hover { background: rgba(255,255,255,0.3); }
+.zoom-img-wrap { display: flex; align-items: center; justify-content: center; }
+@keyframes zoomFadeIn { from { opacity: 0 } to { opacity: 1 } }
 </style>

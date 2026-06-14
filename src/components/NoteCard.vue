@@ -100,14 +100,17 @@ function timeAgo(ts: number) {
   const seconds = Math.floor(diff / 1000)
   if (seconds < 60) return "刚刚"
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes} 分钟前`
+  if (minutes < 60) return `${minutes}分钟前`
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} 小时前`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days} 天前`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months} 个月前`
-  return `${Math.floor(months / 12)} 年前`
+  if (hours < 24) return `${hours}小时前`
+  const d = new Date(ts)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const dateStr = `${d.getMonth() + 1}月${pad(d.getDate())}日`
+  const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  const year = d.getFullYear()
+  const nowYear = new Date().getFullYear()
+  if (year !== nowYear) return `${year}年${dateStr} ${timeStr}`
+  return `${dateStr} ${timeStr}`
 }
 
 function copyContent() {
@@ -160,26 +163,26 @@ function copyShareLink() {
           <v-img v-if="isImage(memo.avatar)" :src="memo.avatar" alt="" cover width="40" height="40" class="avatar-img" />
           <div v-else class="avatar-fallback">{{ displayName(memo).charAt(0).toUpperCase() }}</div>
         </div>
-        <div class="flex-grow-1" style="min-width:0">
+        <div class="flex-grow-1" style="min-width:0;overflow:hidden">
           <div class="d-flex align-center ga-1">
-            <span class="nickname">{{ displayName(memo) }}</span>
+            <span class="nickname text-truncate">{{ displayName(memo) }}</span>
             <v-icon v-if="memo.pinned" size="x-small" color="primary">mdi-pin</v-icon>
           </div>
           <div class="time">{{ timeAgo(memo.createdAt) }}</div>
         </div>
-        <div v-if="loggedIn && (auth.isAdmin || memo.username === auth.userName)" class="d-flex ga-0 flex-shrink-0" style="margin-top:2px">
-          <template v-if="memo.pinned">
-            <v-btn icon="mdi-chevron-up" size="x-small" variant="text" class="pin-move-btn" @click="emit('movePin', memo, 'up')" />
-            <v-btn icon="mdi-chevron-down" size="x-small" variant="text" class="pin-move-btn" @click="emit('movePin', memo, 'down')" />
+        <div class="d-flex ga-0 flex-shrink-0" style="margin-top:2px;align-items:center">
+          <template v-if="loggedIn && (auth.isAdmin || memo.username === auth.userName)">
+            <template v-if="memo.pinned">
+              <v-btn icon="mdi-chevron-up" size="x-small" variant="text" class="pin-move-btn" @click="emit('movePin', memo, 'up')" />
+              <v-btn icon="mdi-chevron-down" size="x-small" variant="text" class="pin-move-btn" @click="emit('movePin', memo, 'down')" />
+            </template>
+            <v-btn icon="mdi-pencil" size="x-small" variant="text" class="action-btn" @click="emit('edit', memo)" />
+            <v-btn icon="mdi-pin-outline" size="x-small" variant="text"
+              :color="memo.pinned ? 'primary' : undefined" class="action-btn"
+              @click="store.togglePin(memo.id)" />
+            <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" class="action-btn"
+              @click="store.deleteNote(memo.id, auth.userName)" />
           </template>
-          <v-btn icon="mdi-pencil" size="x-small" variant="text" class="action-btn" @click="emit('edit', memo)" />
-          <v-btn icon="mdi-pin-outline" size="x-small" variant="text"
-            :color="memo.pinned ? 'primary' : undefined" class="action-btn"
-            @click="store.togglePin(memo.id)" />
-          <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" class="action-btn"
-            @click="store.deleteNote(memo.id, auth.userName)" />
-        </div>
-        <div class="d-flex ga-0 flex-shrink-0" style="margin-top:2px">
           <v-btn icon="mdi-share-variant" size="x-small" variant="text" class="action-btn"
             @click="shareNote" />
           <v-menu location="bottom">
@@ -315,11 +318,16 @@ function copyShareLink() {
 .nickname { font-size: 1.1rem; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
 .time { font-size: 0.68rem; color: rgba(var(--v-theme-on-surface), 0.45); line-height: 1; margin-top: 2px; }
 .action-btn {
+  width: 26px !important;
+  min-width: 26px !important;
+  height: 26px !important;
   opacity: 0;
   transition: opacity 0.2s, transform 0.15s;
-  transform: scale(0.9);
 }
 .pin-move-btn {
+  width: 26px !important;
+  min-width: 26px !important;
+  height: 26px !important;
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -332,6 +340,10 @@ function copyShareLink() {
 .pin-move-btn:hover { opacity: 1 !important; }
 .tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
 .tag-chip-card { font-size: 0.7rem; height: 22px !important; }
+</style>
+
+<style scoped>
+.nickname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .reactions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px; }
 .reaction-chip { font-size: 0.75rem; height: 26px !important; cursor: pointer; }
 .reaction-chip.active { outline: 1px solid rgb(var(--v-theme-primary)); }

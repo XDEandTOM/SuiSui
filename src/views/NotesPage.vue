@@ -457,78 +457,6 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 .icp-link:hover { text-decoration: underline; }
 
 .inline-editor { width: 100%; }
-.editor-box {
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
-  border-radius: 14px; overflow: clip;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  background: rgba(var(--v-theme-surface), 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-.editor-box:focus-within {
-  border-color: rgba(var(--v-theme-primary), 0.3);
-  box-shadow: 0 2px 16px rgba(var(--v-theme-primary), 0.08);
-}
-.inline-textarea {
-  width: 100%; border: none; outline: none; resize: none;
-  padding: 14px 16px 8px; font-size: 0.95rem; line-height: 1.6;
-  font-family: inherit; background: transparent;
-  color: rgb(var(--v-theme-on-surface)); min-height: 80px;
-}
-.inline-textarea::placeholder { color: rgba(var(--v-theme-on-surface), 0.35); }
-.editor-toolbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 8px 8px;
-}
-.editor-toolbar .tool-btn { opacity: 0.5; border-radius: 6px; }
-.editor-toolbar .tool-btn:hover { opacity: 1; background: rgba(var(--v-theme-on-surface), 0.05); }
-.submit-btn { height: 30px; }
-.inline-tag-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
-  padding: 0 12px 8px;
-}
-.inline-tag-bar .tag-input {
-  min-width: 100px; max-width: 160px;
-}
-.inline-tag-bar .tag-input :deep(input) {
-  font-size: 0.8rem !important; padding: 0 !important;
-}
-.md-toolbar .tool-btn { width: 34px; height: 34px; opacity: 0.5; border-radius: 6px; flex-shrink: 0; }
-.md-toolbar .tool-btn:hover { opacity: 1; background: rgba(var(--v-theme-on-surface), 0.05); }
-.search-border :deep(.v-field) { border-color: #424242 !important; }
-.side-card { border-color: #424242 !important; }
-.draft-indicator {
-  display: flex; align-items: center; gap: 4px;
-  padding: 2px 12px 8px 12px;
-  font-size: 0.7rem; color: rgba(var(--v-theme-warning), 0.7);
-}
-.empty-state {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 56px 16px; gap: 12px;
-}
-.empty-illust {
-  position: relative; width: 80px; height: 80px;
-  display: flex; align-items: center; justify-content: center;
-}
-.empty-illust-inner {
-  position: relative; display: flex; align-items: center; justify-content: center;
-}
-.empty-icon-main { opacity: 0.15; }
-.notes-empty .empty-icon-main { opacity: 0.12; }
-.empty-icon-sub {
-  position: absolute; bottom: -4px; right: -12px;
-}
-.empty-icon-sparkle {
-  position: absolute; top: -6px; right: -4px; opacity: 0.4;
-}
-.sparkle-2 { top: -2px; right: -20px; opacity: 0.3; }
-.empty-text-title { font-size: 1rem; font-weight: 600; margin: 0; }
-.empty-text-hint { font-size: 0.82rem; color: rgba(var(--v-theme-on-surface), 0.45); margin: 0; }
-.tool-sep {
-  width: 1px; height: 20px;
-  background: rgba(var(--v-theme-on-surface), 0.1);
-  flex-shrink: 0;
-}
 .tool-sep-sm {
   width: 1px; height: 16px;
   background: rgba(var(--v-theme-on-surface), 0.08);
@@ -666,8 +594,6 @@ async function movePinnedNote(note: Note, dir: "up" | "down") {
 @media (max-width: 768px) {
   .notes-layout.mobile { flex-direction: column; padding: 12px; gap: 8px; }
   .notes-layout.mobile .main-col { width: 100%; }
-  .notes-layout.mobile .inline-textarea { min-height: 60px; padding: 12px 14px 8px; font-size: 0.9rem; }
-  .editor-toolbar .tool-btn { width: 28px; height: 28px; }
 }
 </style>
 
