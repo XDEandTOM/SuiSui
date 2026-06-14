@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -25,6 +26,9 @@ import (
 //go:embed dist/*
 var staticFiles embed.FS
 
+//go:embed live.html
+var livePage string
+
 // Version is set at build time via -ldflags, fallback to "dev" in local builds.
 var Version = "dev"
 var serverPort = "3742"
@@ -36,6 +40,97 @@ var githubToken = ""
 // SSE event hub
 var sseClients = make(map[chan string]bool)
 var sseMu sync.Mutex
+
+// Live chat
+var liveChat []string
+var liveChatMu sync.Mutex
+var liveSSEClients = make(map[chan string]bool)
+var liveSSEMu sync.Mutex
+
+// Live push status
+var liveOnline bool
+var liveOnlineMu sync.Mutex
+
+// mediamtx process
+var mediamtxCmd *exec.Cmd
+
+func startMediaMTX() {
+	path := os.Getenv("MEDIAMTX_PATH")
+	if path == "" { return }
+	// Create config
+	cfg := `rtmp: yes
+hls: yes
+hlsDirectory: /data/hls
+paths:
+  stream:
+    source: publisher
+`
+	cfgPath := filepath.Join(dataDir, "mediamtx.yml")
+	os.WriteFile(cfgPath, []byte(cfg), 0644)
+
+	mediamtxCmd = exec.Command(path, cfgPath)
+	mediamtxCmd.Stdout = os.Stdout
+	mediamtxCmd.Stderr = os.Stderr
+	if err := mediamtxCmd.Start(); err != nil {
+		log.Printf("mediamtx start failed: %v", err)
+		return
+	}
+	log.Printf("MediaMTX started (pid %d)", mediamtxCmd.Process.Pid)
+}
+
+func liveChatHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		var msg struct { Text string `json:"text"`; Author string `json:"author"` }
+		if json.NewDecoder(r.Body).Decode(&msg) != nil || msg.Text == "" { errResp(w, "bad request", 400); return }
+		payload := msg.Author + ": " + msg.Text
+		liveChatMu.Lock()
+		liveChat = append(liveChat, payload)
+		if len(liveChat) > 100 { liveChat = liveChat[len(liveChat)-100:] }
+		liveChatMu.Unlock()
+		// Broadcast via SSE
+		data, _ := json.Marshal(map[string]string{"text": msg.Text, "author": msg.Author})
+		liveSSEMu.Lock()
+		for ch := range liveSSEClients {
+			select { case ch <- string(data): default: close(ch); delete(liveSSEClients, ch) }
+		}
+		liveSSEMu.Unlock()
+		jsonResp(w, map[string]bool{"ok": true})
+		return
+	}
+	// SSE stream
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	flusher, _ := w.(http.Flusher)
+	// Send chat history
+	liveChatMu.Lock()
+	for _, m := range liveChat { fmt.Fprintf(w, "data: %s\n\n", m) }
+	liveChatMu.Unlock()
+	if flusher != nil { flusher.Flush() }
+
+	ch := make(chan string, 10)
+	liveSSEMu.Lock()
+	liveSSEClients[ch] = true
+	liveSSEMu.Unlock()
+
+	notify := r.Context().Done()
+	go func() {
+		<-notify
+		liveSSEMu.Lock()
+		delete(liveSSEClients, ch); close(ch)
+		liveSSEMu.Unlock()
+	}()
+	for msg := range ch { fmt.Fprintf(w, "data: %s\n\n", msg); flusher.Flush() }
+}
+
+func liveStatusHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if HLS playlist exists
+	online := false
+	if _, err := os.Stat(filepath.Join(dataDir, "hls", "stream.m3u8")); err == nil {
+		online = true
+	}
+	jsonResp(w, map[string]bool{"online": online})
+}
 
 func sseBroadcast(event string, data string) {
 	sseMu.Lock()
@@ -138,10 +233,15 @@ func main() {
 	serverCertFile = certFile
 	serverKeyFile = keyFile
 
+	// Start mediamtx for live streaming (if binary exists)
+	startMediaMTX()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", handleAPI)
 	mux.HandleFunc("/uploads/", handleUploads)
 	mux.HandleFunc("/health", handleHealth)
+	mux.HandleFunc("/live/", handleLive)
+	mux.HandleFunc("/hls/", handleHLS)
 	mux.HandleFunc("/", handleStatic)
 
 	handler := loggingMiddleware(compressMiddleware(mux))
@@ -339,6 +439,10 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 		handleSettings(w, r)
 	case strings.HasPrefix(path, "/events"):
 		sseHandler(w, r)
+	case strings.HasPrefix(path, "/live/chat"):
+		liveChatHandler(w, r)
+	case strings.HasPrefix(path, "/live/status"):
+		liveStatusHandler(w, r)
 	case path == "/admin/config":
 		jsonResp(w, map[string]interface{}{
 			"version": Version,
@@ -391,6 +495,23 @@ func handleGitHubProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
+}
+
+func handleLive(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Write([]byte(livePage))
+}
+
+func handleHLS(w http.ResponseWriter, r *http.Request) {
+	// Serve HLS segments (m3u8, ts) from /data/hls
+	path := filepath.Join(dataDir, "hls", strings.TrimPrefix(r.URL.Path, "/hls/"))
+	// Security: ensure path is within hls directory
+	if !strings.HasPrefix(filepath.Clean(path), filepath.Clean(filepath.Join(dataDir, "hls"))) {
+		errResp(w, "forbidden", 403); return
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	http.ServeFile(w, r, path)
 }
 
 func handleStatic(w http.ResponseWriter, r *http.Request) {
