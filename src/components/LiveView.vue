@@ -8,12 +8,12 @@ onMounted(async () => {
   // Load CSS
   const link = document.createElement("link")
   link.rel = "stylesheet"
-  link.href = "https://cdn.jsdelivr.net/npm/dplayer@1.26.0/dist/DPlayer.min.css"
+  link.href = "/DPlayer.min.css"
   document.head.appendChild(link)
 
-  // Load hls.js + DPlayer from CDN
-  await loadScript("https://cdn.jsdelivr.net/npm/hls.js@latest")
-  await loadScript("https://cdn.jsdelivr.net/npm/dplayer@1.26.0/dist/DPlayer.min.js")
+  // Load local scripts
+  await loadScript("/hls.min.js")
+  await loadScript("/DPlayer.min.js")
 
   // Fetch stream URL
   let url = ""
